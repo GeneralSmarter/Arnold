@@ -10,6 +10,10 @@ export interface CrewAgent {
   mission: string;
   status: "active" | "standby" | "idle" | "away";
   accent: "purple" | "red" | "teal" | "amber";
+  reportsTo?: string;
+  skills?: string[];
+  tools?: string[];
+  domains?: string[];
 }
 
 export interface CrewFile {

@@ -3,15 +3,36 @@ import type { Tool } from "../tools/types.js";
 
 const DENYLIST = [
   "rm -rf",
+  "rm -r",
   "format",
   "del /s",
+  "rmdir /s",
   "shutdown",
   "reboot",
   "diskpart",
   "mkfs",
+  "dd if=",
   "chmod -r 777",
+  "takeown",
+  "icacls",
+  "git reset --hard",
+  "git clean",
+  "git checkout --",
+  "git push --force",
   ".agent/secrets.json",
   ".agent\\secrets.json"
+];
+
+const SAFE_SHELL_PATTERNS = [
+  /^git\s+(status|diff|log|show|branch|rev-parse)(\s|$)/i,
+  /^npm\s+run\s+(typecheck|lint|test|build)(\s|$)/i,
+  /^node\s+--version$/i,
+  /^npm\s+--version$/i,
+  /^pnpm\s+--version$/i,
+  /^tsc\s+--noemit$/i,
+  /^rg(\s|$)/i,
+  /^dir(\s|$)/i,
+  /^type\s+[\w./\\ -]+$/i
 ];
 
 export interface PolicyDecision {
@@ -35,6 +56,14 @@ export function checkToolPolicy(
         reason: `Blocked by shell denylist: ${blocked}`
       };
     }
+
+    if (isSafeShellCommand(command)) {
+      return {
+        allowed: true,
+        needsApproval: false,
+        reason: "Shell command is classified as read-only validation or inspection."
+      };
+    }
   }
 
   if (!tool.risky) {
@@ -54,4 +83,15 @@ export function checkToolPolicy(
     needsApproval: approvalMode === "confirm",
     reason: approvalMode === "auto" ? "Auto approval mode." : "Confirmation required."
   };
+}
+
+function isSafeShellCommand(command: string): boolean {
+  const normalized = command.trim();
+  if (!normalized) {
+    return false;
+  }
+  if (/[|&<>;]/.test(normalized)) {
+    return false;
+  }
+  return SAFE_SHELL_PATTERNS.some((pattern) => pattern.test(normalized));
 }

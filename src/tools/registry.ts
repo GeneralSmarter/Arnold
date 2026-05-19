@@ -14,6 +14,10 @@ import { gitDiffTool, gitStatusTool } from "./gitStatus.js";
 import { searchFilesTool } from "./searchFiles.js";
 import { discordEnsureChannelsTool } from "./discordEnsureChannels.js";
 import { discordRenameChannelTool } from "./discordRenameChannel.js";
+import { projectChecksTool } from "./projectChecks.js";
+import { devMemoryTool } from "./devMemory.js";
+import { readSkillTool } from "./readSkill.js";
+import { internshipRunDailyTool, internshipScanTool, internshipStatusTool } from "./internshipTools.js";
 
 const tools = [
   readFileTool,
@@ -22,13 +26,19 @@ const tools = [
   applyPatchTool,
   listFilesTool,
   searchFilesTool,
+  readSkillTool,
   typecheckTool,
+  projectChecksTool,
   gitStatusTool,
   gitDiffTool,
+  devMemoryTool,
   shellTool,
   gmailSearchTool,
   gmailReadTool,
   gmailCreateDraftTool,
+  internshipStatusTool,
+  internshipScanTool,
+  internshipRunDailyTool,
   discordEnsureChannelsTool,
   discordRenameChannelTool,
   fetchUrlTool

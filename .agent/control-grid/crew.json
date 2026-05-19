@@ -4,18 +4,25 @@
     {
       "id": "skynet",
       "name": "Skynet",
-      "role": "Chief of Staff",
-      "mission": "Routes work, watches the system, coordinates the crew, and decides what should move next.",
+      "role": "Overseer",
+      "mission": "Routes work, watches system health, coordinates the crew, and decides what should move next.",
       "status": "active",
-      "accent": "purple"
+      "accent": "purple",
+      "skills": ["self-development", "project-handoff"],
+      "tools": ["read_skill", "git_status", "project_checks", "dev_memory"],
+      "domains": ["routing", "system health", "planning", "self-development"]
     },
     {
-      "id": "t800-scout",
-      "name": "T-800 Scout",
-      "role": "Internship Tracker",
-      "mission": "Tracks opportunities, deadlines, application status, and next actions.",
+      "id": "t800",
+      "name": "T-800",
+      "role": "Internship Lead",
+      "mission": "Owns Internship Radar, tracks opportunities, application updates, deadlines, and next actions.",
       "status": "standby",
-      "accent": "red"
+      "accent": "red",
+      "reportsTo": "skynet",
+      "skills": ["internship-radar"],
+      "tools": ["read_skill", "internship_status", "internship_scan", "internship_run_daily", "gmail_search", "gmail_read", "fetch_url"],
+      "domains": ["internships", "applications", "recruiters", "career tracking"]
     },
     {
       "id": "cyberdyne-tutor",
@@ -23,7 +30,11 @@
       "role": "University Support",
       "mission": "Helps with study planning, assignment support, and keeping academic work moving.",
       "status": "standby",
-      "accent": "teal"
+      "accent": "teal",
+      "reportsTo": "skynet",
+      "skills": ["project-handoff"],
+      "tools": ["read_skill", "read_file", "search_files"],
+      "domains": ["university", "study", "assignments"]
     }
   ]
 }

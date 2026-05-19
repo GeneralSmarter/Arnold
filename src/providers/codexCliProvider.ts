@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import type { AgentMessage, AgentStep } from "../agent/types.js";
 import type { Provider, ProviderContext } from "./types.js";
 import { listTools } from "../tools/registry.js";
+import { listSkills } from "../skills/skillStore.js";
 
 export class CodexCliProvider implements Provider {
   name = "codex-cli" as const;
@@ -14,13 +15,14 @@ export class CodexCliProvider implements Provider {
   ) {}
 
   async generate(messages: AgentMessage[], context: ProviderContext): Promise<AgentStep> {
-    const prompt = renderPrompt(messages, context);
+    const prompt = await renderPrompt(messages, context);
     const output = await runCodex(this.command, this.args, prompt, context.workspaceRoot);
     return parseProviderOutput(output);
   }
 }
 
-function renderPrompt(messages: AgentMessage[], context: ProviderContext): string {
+async function renderPrompt(messages: AgentMessage[], context: ProviderContext): Promise<string> {
+  const skills = await listSkills(context.workspaceRoot);
   return [
     "You are being called by Arnold, a local experimental agent shell. Arnold owns all tools and safety approvals.",
     "Return exactly one JSON object and no Markdown, code fences, commentary, or surrounding text.",
@@ -36,13 +38,17 @@ function renderPrompt(messages: AgentMessage[], context: ProviderContext): strin
     "Rules:",
     "- Use tool_request whenever you need to inspect files, edit files, list files, run commands, fetch URLs, or use connectors.",
     "- File paths must be relative to the workspace root.",
+    "- Review the Available skills list before acting. If a skill seems relevant, call read_skill with its name before planning or editing.",
     "- For programming tasks, follow this loop: inspect relevant files, make the smallest coherent edit, run typecheck, inspect git_status/git_diff, then summarize.",
+    "- In Self-Development Mode, obey the SYSTEM workflow exactly: inspect, plan when broad, patch, validate, diff, log memory, summarize.",
     "- To edit code, inspect the relevant file first.",
     "- Use search_files to find symbols or existing patterns before inventing new structure.",
+    "- Use project_checks to discover validation scripts before choosing tests or builds.",
     "- Prefer replace_in_file for exact targeted edits and apply_patch for multi-line or multi-file changes.",
     "- Use write_file for new files, full rewrites, or cases where incremental edits cannot apply safely.",
     "- Use typecheck instead of shell for TypeScript verification.",
     "- Use git_status and git_diff to understand your own changes before the final response.",
+    "- Use dev_memory after meaningful project changes so future sessions can continue cleanly.",
     "- If a tool result starts with error:, adjust your next step instead of repeating the same call.",
     "- If you cannot complete a request because Arnold lacks a tool, connector, permission flow, or integration, do not stop at 'I cannot'. In your final answer, include: what capability is missing, the smallest Arnold code change that would add it, likely files to edit, and any setup or safety concerns.",
     "- If a tool is blocked by safety policy, explain whether the user can use a safer existing command, local approval mode, or a narrow new Arnold tool instead.",
@@ -59,6 +65,17 @@ function renderPrompt(messages: AgentMessage[], context: ProviderContext): strin
         risky: tool.risky
       })
     ),
+    "",
+    "Available skills:",
+    ...(skills.length > 0
+      ? skills.map((skill) =>
+          JSON.stringify({
+            name: skill.name,
+            title: skill.title,
+            description: skill.description
+          })
+        )
+      : ["(none)"]),
     "",
     ...messages.map((message) => {
       const name = message.name ? `(${message.name})` : "";

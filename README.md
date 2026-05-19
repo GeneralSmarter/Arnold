@@ -72,6 +72,33 @@ List connectors:
 agent connectors
 ```
 
+List Arnold-owned tools:
+
+```bash
+agent tools
+```
+
+List reusable skills:
+
+```bash
+agent skills
+agent skills show self-development
+```
+
+List or talk to the crew:
+
+```bash
+agent crew
+agent crew route "check my internship pipeline"
+agent crew ask t800 "run a dry internship radar summary"
+```
+
+Run a self-development request:
+
+```bash
+agent dev "improve the README and run validation"
+```
+
 Check Gmail auth:
 
 ```bash
@@ -123,9 +150,12 @@ Core local tools:
 - `write_file`: write a full file when incremental edits are not a good fit.
 - `list_files`: list workspace files and folders.
 - `search_files`: search workspace text files for an existing symbol or pattern.
+- `read_skill`: read a local `skills/<name>/SKILL.md` workflow file.
 - `typecheck`: run the project TypeScript typecheck script.
+- `project_checks`: inspect `package.json` and recommend available validation scripts.
 - `git_status`: show concise git status.
 - `git_diff`: show current workspace diff, optionally for one path.
+- `dev_memory`: append a concise self-development note to `HANDOFF.md` or another memory file.
 - `shell`: run a shell command from the workspace root.
 
 Current connector tools:
@@ -133,6 +163,9 @@ Current connector tools:
 - `gmail_search`: search Gmail with Gmail query syntax.
 - `gmail_read`: read a Gmail message by ID.
 - `gmail_create_draft`: create a Gmail draft without sending it.
+- `internship_status`: show Internship Radar state.
+- `internship_scan`: run Internship Radar locally without posting outbound messages.
+- `internship_run_daily`: run the Internship Radar daily workflow, dry-run by default.
 - `discord_ensure_channels`: create missing Discord text channels in the configured guild.
 - `discord_rename_channel`: rename a Discord channel by channel ID.
 - `fetch_url`: fetch readable text from an explicit public HTTP(S) URL.
@@ -361,6 +394,72 @@ For edits, Arnold will ask before writing in `confirm` mode:
 Update src/cli.ts so the help output mentions the new command.
 ```
 
+## Self-Development Mode
+
+Use Self-Development Mode when you want Arnold to improve Arnold:
+
+```bash
+agent dev "add a safe status command and update the docs"
+```
+
+This runs a one-shot development request through the Codex CLI provider and Arnold's own tool safety layer. If `.agent/config.json` is set to `approvalMode: auto`, `agent dev` downgrades the run to `confirm` so code edits still ask first.
+
+The expected workflow is:
+
+1. Inspect `git_status`.
+2. Search and read relevant files.
+3. Make the smallest coherent edit with `replace_in_file` or `apply_patch`.
+4. Run `project_checks` and relevant validation, usually `typecheck`.
+5. Inspect `git_status` and `git_diff`.
+6. Append a durable note with `dev_memory`.
+7. Summarize changed files, checks, and remaining risks.
+
+Arnold should ask before destructive shell commands, dependency installs, deleting/moving files, secret/config changes, email drafts, Discord admin actions, or anything that changes approval boundaries.
+
+## Skills
+
+Arnold has a local-first skill system inspired by OpenClaw-style agents. Skills are plain Markdown files stored under:
+
+```text
+skills/<skill-name>/SKILL.md
+```
+
+Each skill describes when it should be used, which tools it expects, what workflow to follow, and safety notes. The Codex CLI provider sees a compact skill index on every turn. If a skill looks relevant, Arnold should call `read_skill` before planning or editing.
+
+Current starter skills:
+
+- `self-development`: improve Arnold safely.
+- `crew-operations`: route work between Skynet, T-800, and other crew members.
+- `internship-radar`: maintain internship tracking and discovery.
+- `discord-operator`: configure and troubleshoot Discord behavior.
+- `project-handoff`: preserve durable project context.
+
+Useful commands:
+
+```bash
+agent skills
+agent skills show internship-radar
+```
+
+## Crew
+
+Arnold has a small local crew model:
+
+- `Skynet`: overseer and boss. Routes work, checks system health, and decides what should move next.
+- `T-800`: internship lead. Owns Internship Radar, application tracking, recruiter updates, and opportunity discovery.
+- `Cyberdyne Tutor`: university support. Helps with study planning and academic work.
+
+Useful commands:
+
+```bash
+agent crew
+agent crew show skynet
+agent crew route "what should I do for internships today?"
+agent crew ask t800 "show internship status"
+```
+
+Crew mode creates a normal Arnold session with a crew-specific system prompt. It does not create separate OS processes or bypass safety approvals.
+
 ## Config And Sessions
 
 Arnold stores project-local state in:
@@ -434,16 +533,27 @@ The shell tool always blocks commands containing:
 
 ```text
 rm -rf
+rm -r
 format
 del /s
+rmdir /s
 shutdown
 reboot
 diskpart
 mkfs
+dd if=
 chmod -R 777
+takeown
+icacls
+git reset --hard
+git clean
+git checkout --
+git push --force
 ```
 
 `replace_in_file`, `apply_patch`, and `write_file` are all approval-gated in `confirm` mode.
+
+Some read-only shell commands, such as `git status`, `git diff`, `git log`, `npm run typecheck`, `npm run build`, `npm run test`, and `rg`, are classified as safe inspection or validation commands and can run without an approval prompt. General shell commands remain risky.
 
 This safety layer is a starting point, not a complete sandbox. Treat shell access carefully, especially on a VPS.
 
@@ -459,6 +569,12 @@ Add tools in:
 
 ```text
 src/tools/
+```
+
+Add skills in:
+
+```text
+skills/<skill-name>/SKILL.md
 ```
 
 Future connector subsystems for additional email providers, websites, messaging channels, browser tools, OAuth flows, and custom workflows should use official APIs and explicit user-authorized sessions. Do not build token scraping or auth bypasses into Arnold.

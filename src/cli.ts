@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { AgentLoop } from "./agent/loop.js";
+import { renderDeveloperModePrompt } from "./agent/developerMode.js";
 import { describeRun } from "./agent/planner.js";
 import {
   applyConfigOverrides,
@@ -21,10 +22,23 @@ import { runDiscordListener } from "./connectors/discordListener.js";
 import { ensureDiscordTextChannels, renameDiscordChannel } from "./connectors/discordSetup.js";
 import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
+import {
+  getCrewMember,
+  loadCrewManifest,
+  renderCrewPrompt,
+  routeCrewRequest
+} from "./crew/crewStore.js";
+import { generateInternshipBrief } from "./internshipRadar/brief.js";
+import { discoverInternships } from "./internshipRadar/discovery.js";
+import { scanInternshipEmail } from "./internshipRadar/emailScanner.js";
+import { runDailyInternshipRadar, printInternshipRadarStatus } from "./internshipRadar/runner.js";
+import { runInternshipRadarScheduler } from "./internshipRadar/scheduler.js";
 import { SessionStore } from "./memory/sessionStore.js";
 import { createProvider } from "./providers/index.js";
 import type { ProviderName } from "./providers/types.js";
 import { SecretsStore } from "./secrets/secretsStore.js";
+import { listSkills, readSkill } from "./skills/skillStore.js";
+import { listTools } from "./tools/registry.js";
 import { logger } from "./utils/logger.js";
 
 interface ParsedArgs {
@@ -63,6 +77,21 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "tools") {
+    handleTools();
+    return;
+  }
+
+  if (args.command === "skills") {
+    await handleSkills(config, args.subcommand, args.action);
+    return;
+  }
+
+  if (args.command === "crew") {
+    await handleCrew(config, args.subcommand, args.action, args.rest);
+    return;
+  }
+
   if (args.command === "auth" && args.subcommand === "gmail") {
     await handleGmailAuth(config, args.action);
     return;
@@ -98,13 +127,169 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "internship") {
+    await handleInternshipRadar(config, args.subcommand, args.rest);
+    return;
+  }
+
   if (args.command === "chat") {
     await chat(config);
     return;
   }
 
+  if (args.command === "dev") {
+    await developerMode(config, [args.subcommand, ...args.rest].filter(Boolean).join(" "));
+    return;
+  }
+
   logger.error(`Unknown command: ${args.command}`);
   printHelp();
+  process.exitCode = 1;
+}
+
+function handleTools(): void {
+  logger.info("Arnold tools:");
+  for (const tool of listTools()) {
+    logger.info(`- ${tool.name} [${tool.risky ? "risky" : "read-only"}]: ${tool.description}`);
+  }
+}
+
+async function handleSkills(
+  config: AppConfig,
+  subcommand: string | undefined,
+  name: string | undefined
+): Promise<void> {
+  if (!subcommand) {
+    const skills = await listSkills(config.workspaceRoot);
+    if (skills.length === 0) {
+      logger.info("No skills found. Add skills/<name>/SKILL.md to create one.");
+      return;
+    }
+    logger.info("Arnold skills:");
+    for (const skill of skills) {
+      logger.info(`- ${skill.name}: ${skill.title}`);
+      logger.info(`  ${skill.description}`);
+    }
+    return;
+  }
+
+  if (subcommand === "show" && name) {
+    try {
+      const skill = await readSkill(config.workspaceRoot, name);
+      logger.info(skill.content);
+    } catch (error) {
+      logger.error(error instanceof Error ? error.message : "Unable to read skill.");
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  logger.error("Usage: agent skills | agent skills show <name>");
+  process.exitCode = 1;
+}
+
+async function handleCrew(
+  config: AppConfig,
+  subcommand: string | undefined,
+  action: string | undefined,
+  rest: string[]
+): Promise<void> {
+  if (!subcommand) {
+    const manifest = await loadCrewManifest(config.workspaceRoot);
+    logger.info(`Crew mission: ${manifest.mission}`);
+    for (const member of manifest.agents) {
+      const reportsTo = member.reportsTo ? ` -> reports to ${member.reportsTo}` : "";
+      logger.info(`- ${member.id}: ${member.name} [${member.role}]${reportsTo}`);
+      logger.info(`  ${member.mission}`);
+    }
+    return;
+  }
+
+  if (subcommand === "show" && action) {
+    try {
+      const member = await getCrewMember(config.workspaceRoot, action);
+      logger.info(JSON.stringify(member, null, 2));
+    } catch (error) {
+      logger.error(error instanceof Error ? error.message : "Unable to read crew member.");
+      process.exitCode = 1;
+    }
+    return;
+  }
+
+  if (subcommand === "ask" && action) {
+    const request = rest.slice(1).join(" ").trim();
+    if (!request) {
+      logger.error("Usage: agent crew ask <member-id> <request>");
+      process.exitCode = 1;
+      return;
+    }
+    await crewTurn(config, action, request);
+    return;
+  }
+
+  if (subcommand === "route") {
+    const request = rest.join(" ").trim();
+    if (!request) {
+      logger.error("Usage: agent crew route <request>");
+      process.exitCode = 1;
+      return;
+    }
+    const route = await routeCrewRequest(config.workspaceRoot, request);
+    logger.info(`Skynet routed this to ${route.member.name}: ${route.reason}`);
+    await crewTurn(config, route.member.id, request, route.reason);
+    return;
+  }
+
+  logger.error("Usage: agent crew | agent crew show <member-id> | agent crew ask <member-id> <request> | agent crew route <request>");
+  process.exitCode = 1;
+}
+
+async function handleInternshipRadar(
+  config: AppConfig,
+  subcommand: string | undefined,
+  rest: string[]
+): Promise<void> {
+  const postToDiscord = rest.includes("--post");
+  const watch = rest.includes("--watch");
+
+  if (subcommand === "scan-email") {
+    const result = await scanInternshipEmail(config);
+    logger.info(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (subcommand === "discover") {
+    const result = await discoverInternships(config);
+    logger.info(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  if (subcommand === "brief") {
+    const result = await generateInternshipBrief(config, { postToDiscord });
+    logger.info(result.markdown);
+    logger.info(`\nSaved brief: ${result.path}`);
+    logger.info(result.postedToDiscord ? "Posted to Discord." : "Dry-run only. Add --post to send to Discord.");
+    return;
+  }
+
+  if (subcommand === "run-daily") {
+    if (watch) {
+      await runInternshipRadarScheduler(config);
+      return;
+    }
+    const result = await runDailyInternshipRadar(config, { postToDiscord });
+    logger.info(result.brief.markdown);
+    logger.info(`\nSaved brief: ${result.brief.path}`);
+    logger.info(result.brief.postedToDiscord ? "Posted to Discord." : "Dry-run only. Add --post to send to Discord.");
+    return;
+  }
+
+  if (subcommand === "status") {
+    await printInternshipRadarStatus(config);
+    return;
+  }
+
+  logger.error("Usage: agent internship scan-email|discover|brief|run-daily|status [--post] [--watch]");
   process.exitCode = 1;
 }
 
@@ -396,6 +581,67 @@ async function chat(config: AppConfig): Promise<void> {
   }
 }
 
+async function developerMode(config: AppConfig, request: string): Promise<void> {
+  const trimmed = request.trim();
+  if (!trimmed) {
+    logger.error("Usage: agent dev <development request>");
+    process.exitCode = 1;
+    return;
+  }
+
+  const devConfig = applyConfigOverrides(config, {
+    provider: "codex-cli",
+    approvalMode: config.approvalMode === "auto" ? "confirm" : config.approvalMode
+  });
+  const provider = createProvider(devConfig.provider);
+  const sessionStore = new SessionStore(devConfig.workspaceRoot);
+  const session = await sessionStore.create(devConfig);
+  session.messages.push({
+    role: "system",
+    content: renderDeveloperModePrompt(trimmed),
+    createdAt: new Date().toISOString()
+  });
+  await sessionStore.save(session);
+
+  logger.info("Arnold Self-Development Mode");
+  logger.info(describeRun(devConfig.provider, devConfig.workspaceRoot));
+  logger.info(`Approval: ${devConfig.approvalMode}`);
+
+  const loop = new AgentLoop(devConfig, provider, sessionStore, session);
+  const answer = await loop.runUserTurn(trimmed);
+  logger.info(`\nArnold: ${answer}`);
+}
+
+async function crewTurn(
+  config: AppConfig,
+  memberId: string,
+  request: string,
+  routeReason?: string
+): Promise<void> {
+  const manifest = await loadCrewManifest(config.workspaceRoot);
+  const member = await getCrewMember(config.workspaceRoot, memberId);
+  const crewConfig = applyConfigOverrides(config, {
+    approvalMode: config.approvalMode === "auto" ? "confirm" : config.approvalMode
+  });
+  const provider = createProvider(crewConfig.provider);
+  const sessionStore = new SessionStore(crewConfig.workspaceRoot);
+  const session = await sessionStore.create(crewConfig);
+  session.messages.push({
+    role: "system",
+    content: renderCrewPrompt(manifest, member, request, routeReason),
+    createdAt: new Date().toISOString()
+  });
+  await sessionStore.save(session);
+
+  logger.info(`Crew member: ${member.name} (${member.role})`);
+  logger.info(describeRun(crewConfig.provider, crewConfig.workspaceRoot));
+  logger.info(`Approval: ${crewConfig.approvalMode}`);
+
+  const loop = new AgentLoop(crewConfig, provider, sessionStore, session);
+  const answer = await loop.runUserTurn(request);
+  logger.info(`\n${member.name}: ${answer}`);
+}
+
 async function askQuestion(
   rl: ReturnType<typeof createInterface>,
   query: string
@@ -433,6 +679,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       parsed.workspaceRoot = argv[++i];
       continue;
     }
+    positionals.push(arg);
   }
 
   parsed.command = positionals[0];
@@ -463,6 +710,14 @@ Usage:
   agent chat [--provider mock|codex-cli] [--approval suggest|confirm|auto] [--workspace path]
   agent config [--workspace path]
   agent connectors
+  agent tools
+  agent skills
+  agent skills show <name>
+  agent crew
+  agent crew show <member-id>
+  agent crew ask <member-id> <request>
+  agent crew route <request>
+  agent dev <development request>
   agent auth gmail login|status|logout
   agent auth telegram token|status|logout
   agent auth discord token|status|logout
@@ -470,19 +725,36 @@ Usage:
   agent discord listen
   agent discord ensure-channels [channel-name...]
   agent discord rename-channel <channel-id> <new-name>
+  agent internship scan-email
+  agent internship discover
+  agent internship brief [--post]
+  agent internship run-daily [--post|--watch]
+  agent internship status
 
 Commands:
   chat        Start an interactive terminal chat
   config      Print the current config, creating .agent/config.json if needed
   connectors  List installed connectors and their tools
+  tools       List Arnold-owned tools available to the agent
+  skills      List or show local SKILL.md workflow files
+  crew        List, inspect, route, or ask Arnold crew members
+  dev         Run one self-development request through the safe coding workflow
   auth        Configure connector authentication
   telegram    Run the Telegram bot listener
   discord     Run the Discord bot listener
+  internship  Run Internship Radar scans, discovery, briefs, and scheduler
 
 Examples:
   agent chat
   agent chat --provider mock --approval confirm
   agent config --workspace .
+  agent tools
+  agent skills
+  agent skills show self-development
+  agent crew
+  agent crew route "check my internship pipeline"
+  agent crew ask t800 "run a dry internship radar summary"
+  agent dev "add a small tool and update README"
   agent auth gmail status
   agent auth telegram token
   agent telegram listen
@@ -490,6 +762,9 @@ Examples:
   agent discord listen
   agent discord ensure-channels general internship-tracker uni-tracker
   agent discord rename-channel 123456789 arnolds-cave
+  agent internship run-daily
+  agent internship run-daily --post
+  agent internship run-daily --watch
 `);
 }
 

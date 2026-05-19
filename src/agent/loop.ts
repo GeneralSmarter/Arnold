@@ -17,6 +17,7 @@ export class AgentLoop {
   async runUserTurn(input: string): Promise<string> {
     this.session.messages.push(makeMessage("user", input));
     await this.sessionStore.save(this.session);
+    const repeatedErrors = new Map<string, number>();
 
     for (let i = 0; i < 20; i += 1) {
       const step = await this.provider.generate(this.session.messages, {
@@ -64,6 +65,22 @@ export class AgentLoop {
       const result = await tool.run(step.request.input, { config: this.config });
       this.session.messages.push(makeMessage("tool", `${result.ok ? "ok" : "error"}:\n${result.content}`, tool.name));
       await this.sessionStore.save(this.session);
+
+      if (!result.ok) {
+        const errorKey = `${tool.name}:${stableInputKey(step.request.input)}`;
+        const count = (repeatedErrors.get(errorKey) ?? 0) + 1;
+        repeatedErrors.set(errorKey, count);
+        if (count >= 2) {
+          const content = [
+            `Stopped because ${tool.name} failed twice with the same input.`,
+            `Last error: ${result.content}`,
+            "Try a different input, inspect more context, or suggest the smallest Arnold code change needed to continue."
+          ].join(" ");
+          this.session.messages.push(makeMessage("assistant", content));
+          await this.sessionStore.save(this.session);
+          return content;
+        }
+      }
     }
 
     const content = [
@@ -74,6 +91,24 @@ export class AgentLoop {
     await this.sessionStore.save(this.session);
     return content;
   }
+}
+
+function stableInputKey(input: Record<string, unknown>): string {
+  return JSON.stringify(sortObject(input));
+}
+
+function sortObject(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(sortObject);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, sortObject(item)])
+  );
 }
 
 function makeMessage(role: AgentMessage["role"], content: string, name?: string): AgentMessage {

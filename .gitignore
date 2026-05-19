@@ -4,6 +4,7 @@ node_modules/
 .agent/sessions/
 .agent/*.log
 .agent/*.lock
+.agent/internship-radar/
 dist/
 apps/control-grid/.next/
 apps/control-grid/out/

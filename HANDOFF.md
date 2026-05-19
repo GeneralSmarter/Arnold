@@ -6,7 +6,7 @@ Arnold is a local TypeScript/Node agent scaffold. The goal is to become a modula
 
 The main user goal is to have a personal, locally runnable agent platform that is easy to extend with subsystems such as code tools, Gmail, web fetch, future calendar/browser tools, and eventually VPS/daemon workflows. The user prefers something playful and useful now, but still simple enough to understand and build on.
 
-Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, self-programming support tools, Gmail connector, explicit URL fetch connector, Telegram and Discord remote input listeners, safety approvals, JSON session storage, and a local Control Grid dashboard. It is not a finished autonomous agent platform yet.
+Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, self-programming support tools, a first-class self-development command, local Markdown skills, a simple multi-agent crew model, Gmail connector, explicit URL fetch connector, Telegram and Discord remote input listeners, safety approvals, JSON session storage, Internship Radar, and a local Control Grid dashboard. It is not a finished autonomous agent platform yet.
 
 ## 2. Important Context Not Obvious From The Code
 
@@ -31,7 +31,10 @@ Main source areas:
 - `src/cli.ts`: command routing for chat, config, connector listing, and Gmail auth setup/status/logout.
 - `src/agent/loop.ts`: core tool loop. It sends messages to the provider, executes requested tools after policy checks, appends tool results, and loops until final output.
 - `src/providers/`: provider interface plus `mock` and experimental `codex-cli`.
-- `src/tools/`: Arnold-owned tools. Current tools are file read/write/list/search, `replace_in_file`, `apply_patch`, `typecheck`, git status/diff, shell, Gmail search/read/create draft, Discord channel admin, and URL fetch.
+- `src/crew/`: crew manifest loading, local routing, and crew-specific prompt rendering.
+- `src/tools/`: Arnold-owned tools. Current tools are file read/write/list/search, `replace_in_file`, `apply_patch`, `typecheck`, `project_checks`, `dev_memory`, git status/diff, shell, Gmail search/read/create draft, Discord channel admin, and URL fetch.
+- `src/skills/`: local skill store for plain Markdown `skills/<name>/SKILL.md` workflow files.
+- `skills/`: reusable local workflow instructions for Arnold.
 - `src/safety/`: approval prompt and denylist policy.
 - `src/config/config.ts`: validates project-local config and connector settings.
 - `src/secrets/secretsStore.ts`: reads/writes `.agent/secrets.json`.
@@ -54,10 +57,13 @@ Important data flow:
 Provider/tool protocol:
 
 - `codex-cli` prompts Codex to return exactly one JSON object.
-- Codex can request tools such as `list_files`, `search_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `git_status`, `git_diff`, `shell`, `gmail_search`, `gmail_read`, `gmail_create_draft`, `discord_ensure_channels`, `discord_rename_channel`, and `fetch_url`.
+- Codex can request tools such as `list_files`, `search_files`, `read_file`, `read_skill`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `project_checks`, `git_status`, `git_diff`, `dev_memory`, `shell`, `gmail_search`, `gmail_read`, `gmail_create_draft`, `discord_ensure_channels`, `discord_rename_channel`, and `fetch_url`.
 - The provider prompt tells Codex to inspect files first, search for existing patterns, prefer `replace_in_file` for exact targeted edits, prefer `apply_patch` for multi-line or multi-file edits, run `typecheck`, inspect `git_status`/`git_diff`, and reserve `write_file` for new files or full rewrites.
+- The provider prompt includes a compact skill index. When a skill seems relevant, Codex should call `read_skill` before planning or editing.
 - If Arnold cannot complete a request because a tool, connector, permission flow, or integration is missing, the provider prompt tells Codex to suggest the smallest Arnold code change that would add the capability.
 - If Codex returns invalid or plain output, Arnold treats it as a final answer rather than crashing.
+- `agent dev <request>` creates a one-shot Self-Development Mode session. It forces `codex-cli`, downgrades `auto` approval to `confirm`, injects a coding workflow system prompt, and expects inspect → plan → edit → validate → diff → memory → summarize.
+- `agent crew` lists crew members. `agent crew route <request>` lets Skynet route work locally, and `agent crew ask <member-id> <request>` runs a crew-specific session.
 
 Integrations:
 
@@ -80,8 +86,15 @@ Working:
 - Workspace-safe file listing, reading, and writing.
 - Safer incremental edit tools through `replace_in_file` and `apply_patch`.
 - Self-programming support tools: `search_files`, `typecheck`, `git_status`, and `git_diff`.
+- Self-development workflow command: `agent dev <request>`.
+- Tool visibility command: `agent tools`.
+- Skill visibility commands: `agent skills` and `agent skills show <name>`.
+- Crew commands: `agent crew`, `agent crew show <member-id>`, `agent crew route <request>`, and `agent crew ask <member-id> <request>`.
+- Additional self-development tools: `project_checks` and `dev_memory`.
+- Plain Markdown starter skills: `self-development`, `crew-operations`, `internship-radar`, `discord-operator`, and `project-handoff`.
+- Internship agent tools: `internship_status`, `internship_scan`, and `internship_run_daily`.
 - Approval previews can be customized per tool; the new edit tools use compact previews.
-- Shell tool with approval and denylist.
+- Shell tool with approval, safer read-only command classification, and broader destructive-command blocking.
 - Project-local config and sessions.
 - Gmail OAuth login/status/logout.
 - Gmail connector is authenticated and enabled in `.agent/config.json`.
@@ -122,6 +135,7 @@ Not implemented:
 - Gmail OAuth depends on the Google Cloud consent screen and test-user setup. If another account is used, it must be added as a test user.
 - `fetch_url` uses simple HTML stripping, not a full readability parser.
 - `shell` uses Node child-process execution and is powerful. Approval mode should stay `confirm` unless the user explicitly wants higher autonomy.
+- `agent dev` intentionally uses `confirm` even if the config is set to `auto`.
 - Shell denylist is basic and not a real security sandbox.
 - `write_file` can overwrite entire files. It is approval-gated, but its preview is still just raw input.
 - The Codex CLI provider shells out once per provider turn, which may be slow and can create verbose behavior.
@@ -132,12 +146,11 @@ Not implemented:
 Priority next steps:
 
 1. Test Gmail end-to-end from `agent chat`: search recent emails, read one message by ID, and create a draft.
-2. Run one manual `codex-cli` chat edit to confirm Codex uses `replace_in_file` or `apply_patch` and that the approval preview feels good.
+2. Run a real `agent dev` edit request to confirm Codex uses `replace_in_file` or `apply_patch`, validates, diffs, and logs memory cleanly.
 3. Add `agent sessions list` and `agent chat --resume`.
 4. Add a tool-call/activity log view in CLI output so users can see what Arnold is doing without opening session JSON.
-5. Add `agent tools` to list all available tools and their risky/read-only status.
-6. Add remote approval commands such as `/approve <id>` and `/deny <id>` for Telegram/Discord.
-7. Add workflow files under a future `workflows/` folder.
+5. Add remote approval commands such as `/approve <id>` and `/deny <id>` for Telegram/Discord.
+6. Add skill creation/update guidance after successful workflows.
 
 Avoid doing next unless the user confirms:
 
@@ -178,6 +191,14 @@ Tasks that need user confirmation:
 - Added Control Grid Phase 1 Next.js dashboard under `apps/control-grid`.
 - Added real filesystem state under `.agent/control-grid/tasks.json` and `.agent/control-grid/crew.json`.
 - Added local dashboard routes for Tasks, Team/Discord controls, Visual Office, and Docs, wired to real sessions/config/git/docs data.
+- Added Internship Radar Phase 1 under `src/internshipRadar/`, with Gmail scan, public opportunity discovery, daily briefs, Discord posting guard, and filesystem state under `.agent/internship-radar/`.
+- Added `agent dev <request>` Self-Development Mode.
+- Added `agent tools` for tool visibility.
+- Added `project_checks` and `dev_memory` tools for coding validation discovery and durable development notes.
+- Improved shell policy with broader destructive-command blocks and read-only validation command classification.
+- Added repeated tool-error stopping in the agent loop.
+- Added Arnold Skills v1: local `skills/<name>/SKILL.md`, `read_skill`, `agent skills`, prompt skill indexing, and starter skills for self-development, Internship Radar, Discord, and handoff work.
+- Added multi-agent crew v1: Skynet as overseer, T-800 as Internship Lead, local request routing, crew-specific sessions, crew CLI commands, and Internship Radar tools for the T-800 role.
 
 ### 2026-05-18
 

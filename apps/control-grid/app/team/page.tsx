@@ -21,10 +21,11 @@ export default async function TeamPage() {
         {crew.agents.map((agent) => (
           <Panel key={agent.id} className="relative overflow-hidden">
             <div className={`absolute right-4 top-4 h-3 w-3 rounded-full ${agent.status === "active" ? "bg-signal-teal" : "bg-slate-600"}`} />
-            <div className="mb-4 text-5xl pixelated">{agent.id === "skynet" ? "S" : agent.id === "t800-scout" ? "T" : "C"}</div>
+            <div className="mb-4 text-5xl pixelated">{agent.id === "skynet" ? "S" : agent.id.startsWith("t800") ? "T" : "C"}</div>
             <h2 className="text-xl font-bold text-white">{agent.name}</h2>
             <Badge tone={agent.accent} className="mt-2">{agent.role}</Badge>
             <p className="mt-4 text-sm leading-6 text-slate-400">{agent.mission}</p>
+            {agent.reportsTo ? <p className="mt-3 font-mono text-xs uppercase tracking-[0.18em] text-slate-500">Reports to {agent.reportsTo}</p> : null}
           </Panel>
         ))}
       </div>
