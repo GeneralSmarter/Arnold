@@ -8,4 +8,5 @@ dist/
 apps/control-grid/.next/
 apps/control-grid/out/
 apps/control-grid/.env.local
+apps/control-grid/tsconfig.tsbuildinfo
 .env
