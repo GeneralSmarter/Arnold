@@ -1,0 +1,22 @@
+{
+  "provider": "codex-cli",
+  "approvalMode": "confirm",
+  "workspaceRoot": "C:\\Users\\marco\\Documents\\2026\\Bot Mode",
+  "connectors": {
+    "gmail": {
+      "enabled": true,
+      "defaultSearchLimit": 10
+    },
+    "web": {
+      "enabled": true,
+      "maxBytes": 500000,
+      "maxRedirects": 3,
+      "blockedHosts": [
+        "localhost",
+        "127.0.0.1",
+        "::1"
+      ],
+      "allowedDomains": []
+    }
+  }
+}

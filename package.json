@@ -1,0 +1,20 @@
+{
+  "name": "arnold",
+  "version": "0.1.0",
+  "description": "A clean local AI agent scaffold with a CLI-first interface.",
+  "type": "module",
+  "bin": {
+    "agent": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
