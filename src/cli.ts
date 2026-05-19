@@ -16,6 +16,7 @@ import {
   getGmailAuthStatus,
   toStoredToken
 } from "./connectors/gmailAuth.js";
+import { getDiscordBotProfile } from "./connectors/discordClient.js";
 import { runDiscordListener } from "./connectors/discordListener.js";
 import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
@@ -100,7 +101,13 @@ async function handleDiscordAuth(config: AppConfig, action: string | undefined):
 
   if (action === "status") {
     const secrets = await store.load();
-    logger.info(secrets.discord?.botToken ? "Discord bot token is configured." : "Discord bot token is not configured.");
+    const botToken = secrets.discord?.botToken;
+    if (!botToken) {
+      logger.info("Discord bot token is not configured.");
+      return;
+    }
+    const profile = await getDiscordBotProfile(botToken);
+    logger.info(`Discord bot token is configured for ${profile.username} (${profile.id}).`);
     return;
   }
 

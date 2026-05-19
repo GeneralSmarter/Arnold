@@ -40,6 +40,18 @@ export async function runDiscordListener(config: AppConfig): Promise<void> {
     logger.info("Use !id in Discord to find guild/channel IDs, then add them to .agent/config.json.");
   });
 
+  client.on(Events.Error, (error) => {
+    logger.error(`Discord client error: ${error.message}`);
+  });
+
+  client.on(Events.Warn, (message) => {
+    logger.info(`Discord warning: ${message}`);
+  });
+
+  client.on(Events.ShardError, (error) => {
+    logger.error(`Discord shard error: ${error.message}`);
+  });
+
   client.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) {
       return;
@@ -53,7 +65,9 @@ export async function runDiscordListener(config: AppConfig): Promise<void> {
     }
   });
 
-  await client.login(botToken);
+  logger.info("Connecting to Discord Gateway...");
+  await withTimeout(client.login(botToken), 30_000, "Discord Gateway login did not finish within 30 seconds.");
+  await waitForReady(client);
 }
 
 async function handleMessage(
@@ -161,4 +175,37 @@ async function safeReply(message: Message, text: string): Promise<void> {
     return;
   }
   await message.reply(text);
+}
+
+async function waitForReady(client: Client): Promise<void> {
+  if (client.isReady()) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error("Discord login succeeded, but the client did not become ready within 30 seconds."));
+    }, 30_000);
+
+    client.once(Events.ClientReady, () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  }
 }
