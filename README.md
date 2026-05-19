@@ -9,6 +9,7 @@ Arnold is a clean local AI agent scaffold with a CLI-first interface. It is mean
 - A modular provider layer with mock mode and an experimental Codex CLI wrapper.
 - A small tool system for file reads, incremental edits, full file writes, file listing, and shell commands.
 - Connector tools for Gmail and explicit web URL fetching.
+- A Telegram listener for remote `/ask` messages from allowed chats.
 - A basic safety layer with approval modes and a destructive-command denylist.
 - Project-local JSON config and session storage.
 
@@ -77,6 +78,13 @@ Check Gmail auth:
 agent auth gmail status
 ```
 
+Configure Telegram:
+
+```bash
+agent auth telegram token
+agent telegram listen
+```
+
 Useful overrides:
 
 ```bash
@@ -103,6 +111,10 @@ Current connector tools:
 - `gmail_read`: read a Gmail message by ID.
 - `gmail_create_draft`: create a Gmail draft without sending it.
 - `fetch_url`: fetch readable text from an explicit public HTTP(S) URL.
+
+Remote input surfaces:
+
+- Telegram long polling can receive `/ask` commands and pass them into Arnold.
 
 Connector secrets are stored in:
 
@@ -178,6 +190,43 @@ Default web settings live in `.agent/config.json`:
 
 Arnold blocks private/local network targets by default. Set `allowedDomains` only if you want to restrict fetching to a known list of public domains.
 
+## Telegram Setup
+
+Create a Telegram bot by messaging `@BotFather` in Telegram and running `/newbot`. Copy the bot token, then run:
+
+```bash
+agent auth telegram token
+```
+
+Enable Telegram in `.agent/config.json`:
+
+```json
+{
+  "connectors": {
+    "telegram": {
+      "enabled": true,
+      "allowedChatIds": [],
+      "pollTimeoutSeconds": 25
+    }
+  }
+}
+```
+
+Start the listener:
+
+```bash
+agent telegram listen
+```
+
+Message your bot with `/id`, copy the returned chat ID into `allowedChatIds`, then restart the listener. After that, use:
+
+```text
+/status
+/ask what are the next tasks in HANDOFF.md?
+```
+
+Telegram `/ask` runs Arnold with `suggest` approval mode for now. Read-only tools can run, but risky actions such as file edits, shell commands, and Gmail draft creation are blocked until a dedicated remote approval flow is added.
+
 ## Mock Mode
 
 Mock mode is the default provider. It returns placeholder responses and demonstrates a tool-call flow.
@@ -252,6 +301,11 @@ Default config:
       "maxRedirects": 3,
       "blockedHosts": ["localhost", "127.0.0.1", "::1"],
       "allowedDomains": []
+    },
+    "telegram": {
+      "enabled": false,
+      "allowedChatIds": [],
+      "pollTimeoutSeconds": 25
     }
   }
 }

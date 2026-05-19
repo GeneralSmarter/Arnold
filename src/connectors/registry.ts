@@ -12,6 +12,12 @@ export const connectors: ConnectorMetadata[] = [
     displayName: "Web Fetch",
     description: "Fetch readable text from explicit public HTTP(S) URLs.",
     tools: ["fetch_url"]
+  },
+  {
+    name: "telegram",
+    displayName: "Telegram",
+    description: "Receive remote chat commands through a Telegram bot using long polling.",
+    tools: []
   }
 ];
 

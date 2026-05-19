@@ -14,6 +14,7 @@ export interface AppConfig {
 export interface ConnectorConfig {
   gmail: GmailConnectorConfig;
   web: WebConnectorConfig;
+  telegram: TelegramConnectorConfig;
 }
 
 export interface GmailConnectorConfig {
@@ -27,6 +28,12 @@ export interface WebConnectorConfig {
   maxRedirects: number;
   blockedHosts: string[];
   allowedDomains: string[];
+}
+
+export interface TelegramConnectorConfig {
+  enabled: boolean;
+  allowedChatIds: string[];
+  pollTimeoutSeconds: number;
 }
 
 const CONFIG_DIR = ".agent";
@@ -124,6 +131,11 @@ function defaultConnectorConfig(): ConnectorConfig {
       maxRedirects: 3,
       blockedHosts: ["localhost", "127.0.0.1", "::1"],
       allowedDomains: []
+    },
+    telegram: {
+      enabled: false,
+      allowedChatIds: [],
+      pollTimeoutSeconds: 25
     }
   };
 }
@@ -139,7 +151,8 @@ function validateConnectorConfig(value: unknown): ConnectorConfig {
   const connectors = value as Record<string, unknown>;
   return {
     gmail: validateGmailConnectorConfig(connectors.gmail, defaults.gmail),
-    web: validateWebConnectorConfig(connectors.web, defaults.web)
+    web: validateWebConnectorConfig(connectors.web, defaults.web),
+    telegram: validateTelegramConnectorConfig(connectors.telegram, defaults.telegram)
   };
 }
 
@@ -209,6 +222,39 @@ function validateWebConnectorConfig(
   }
 
   return { enabled, maxBytes, maxRedirects, blockedHosts, allowedDomains };
+}
+
+function validateTelegramConnectorConfig(
+  value: unknown,
+  defaults: TelegramConnectorConfig
+): TelegramConnectorConfig {
+  if (value === undefined) {
+    return defaults;
+  }
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid config: connectors.telegram must be an object.");
+  }
+  const config = value as Record<string, unknown>;
+  const enabled = config.enabled ?? defaults.enabled;
+  const allowedChatIds = config.allowedChatIds ?? defaults.allowedChatIds;
+  const pollTimeoutSeconds = config.pollTimeoutSeconds ?? defaults.pollTimeoutSeconds;
+
+  if (typeof enabled !== "boolean") {
+    throw new Error("Invalid config: connectors.telegram.enabled must be a boolean.");
+  }
+  if (!isStringArray(allowedChatIds)) {
+    throw new Error("Invalid config: connectors.telegram.allowedChatIds must be a string array.");
+  }
+  if (
+    typeof pollTimeoutSeconds !== "number" ||
+    !Number.isInteger(pollTimeoutSeconds) ||
+    pollTimeoutSeconds < 1 ||
+    pollTimeoutSeconds > 50
+  ) {
+    throw new Error("Invalid config: connectors.telegram.pollTimeoutSeconds must be an integer from 1 to 50.");
+  }
+
+  return { enabled, allowedChatIds, pollTimeoutSeconds };
 }
 
 function isStringArray(value: unknown): value is string[] {

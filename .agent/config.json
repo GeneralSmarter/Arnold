@@ -17,6 +17,11 @@
         "::1"
       ],
       "allowedDomains": []
+    },
+    "telegram": {
+      "enabled": false,
+      "allowedChatIds": [],
+      "pollTimeoutSeconds": 25
     }
   }
 }

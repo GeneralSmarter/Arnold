@@ -16,6 +16,7 @@ import {
   getGmailAuthStatus,
   toStoredToken
 } from "./connectors/gmailAuth.js";
+import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
 import { SessionStore } from "./memory/sessionStore.js";
 import { createProvider } from "./providers/index.js";
@@ -63,6 +64,16 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "auth" && args.subcommand === "telegram") {
+    await handleTelegramAuth(config, args.action);
+    return;
+  }
+
+  if (args.command === "telegram" && args.subcommand === "listen") {
+    await runTelegramListener(config);
+    return;
+  }
+
   if (args.command === "chat") {
     await chat(config);
     return;
@@ -70,6 +81,47 @@ async function main(): Promise<void> {
 
   logger.error(`Unknown command: ${args.command}`);
   printHelp();
+  process.exitCode = 1;
+}
+
+async function handleTelegramAuth(config: AppConfig, action: string | undefined): Promise<void> {
+  const store = new SecretsStore(config.workspaceRoot);
+
+  if (action === "status") {
+    const secrets = await store.load();
+    logger.info(secrets.telegram?.botToken ? "Telegram bot token is configured." : "Telegram bot token is not configured.");
+    return;
+  }
+
+  if (action === "logout") {
+    await store.clearTelegram();
+    logger.info("Telegram bot token removed from .agent/secrets.json.");
+    return;
+  }
+
+  if (action === "token") {
+    const rl = createInterface({ input, output });
+    try {
+      const token = stripOuterQuotes((await rl.question("Telegram bot token from @BotFather: ")).trim());
+      if (!token) {
+        throw new Error("Telegram bot token is required.");
+      }
+      const secrets = await store.load();
+      await store.save({
+        ...secrets,
+        telegram: { botToken: token }
+      });
+      logger.info(`Telegram token saved to ${store.path()}.`);
+      if (!config.connectors.telegram.enabled) {
+        logger.info("Telegram connector is still disabled. Set connectors.telegram.enabled to true in .agent/config.json.");
+      }
+    } finally {
+      rl.close();
+    }
+    return;
+  }
+
+  logger.error("Usage: agent auth telegram token|status|logout");
   process.exitCode = 1;
 }
 
@@ -316,18 +368,23 @@ Usage:
   agent config [--workspace path]
   agent connectors
   agent auth gmail login|status|logout
+  agent auth telegram token|status|logout
+  agent telegram listen
 
 Commands:
   chat        Start an interactive terminal chat
   config      Print the current config, creating .agent/config.json if needed
   connectors  List installed connectors and their tools
   auth        Configure connector authentication
+  telegram    Run the Telegram bot listener
 
 Examples:
   agent chat
   agent chat --provider mock --approval confirm
   agent config --workspace .
   agent auth gmail status
+  agent auth telegram token
+  agent telegram listen
 `);
 }
 
