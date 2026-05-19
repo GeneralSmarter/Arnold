@@ -31,7 +31,10 @@ export class AgentLoop {
 
       const tool = getTool(step.request.toolName);
       if (!tool) {
-        const content = `Tool not found: ${step.request.toolName}`;
+        const content = [
+          `error:\nTool not found: ${step.request.toolName}`,
+          "If this tool is needed, explain the smallest Arnold code change that would add it."
+        ].join("\n");
         this.session.messages.push(makeMessage("tool", content, step.request.toolName));
         await this.sessionStore.save(this.session);
         continue;
@@ -39,7 +42,10 @@ export class AgentLoop {
 
       const policy = checkToolPolicy(tool, step.request.input, this.config.approvalMode);
       if (!policy.allowed) {
-        const content = `Tool blocked by safety policy: ${policy.reason}`;
+        const content = [
+          `error:\nTool blocked by safety policy: ${policy.reason}`,
+          "If this action is still needed, suggest a safer workflow or a narrow Arnold code change."
+        ].join("\n");
         this.session.messages.push(makeMessage("tool", content, tool.name));
         await this.sessionStore.save(this.session);
         continue;
@@ -60,7 +66,10 @@ export class AgentLoop {
       await this.sessionStore.save(this.session);
     }
 
-    const content = "Stopped after too many tool steps. Summarize progress, then try a narrower request.";
+    const content = [
+      "Stopped after too many tool steps.",
+      "Summarize progress and, if Arnold needs a better tool or workflow to finish this kind of request, suggest the smallest code change that would add it."
+    ].join(" ");
     this.session.messages.push(makeMessage("assistant", content));
     await this.sessionStore.save(this.session);
     return content;

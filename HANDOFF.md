@@ -54,6 +54,7 @@ Provider/tool protocol:
 - `codex-cli` prompts Codex to return exactly one JSON object.
 - Codex can request tools such as `list_files`, `search_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `git_status`, `git_diff`, `shell`, `gmail_search`, `gmail_read`, `gmail_create_draft`, and `fetch_url`.
 - The provider prompt tells Codex to inspect files first, search for existing patterns, prefer `replace_in_file` for exact targeted edits, prefer `apply_patch` for multi-line or multi-file edits, run `typecheck`, inspect `git_status`/`git_diff`, and reserve `write_file` for new files or full rewrites.
+- If Arnold cannot complete a request because a tool, connector, permission flow, or integration is missing, the provider prompt tells Codex to suggest the smallest Arnold code change that would add the capability.
 - If Codex returns invalid or plain output, Arnold treats it as a final answer rather than crashing.
 
 Integrations:
@@ -165,6 +166,7 @@ Tasks that need user confirmation:
 - Updated README with Telegram and Discord setup instructions.
 - Added self-programming support tools (`search_files`, `typecheck`, `git_status`, `git_diff`) and increased the agent loop budget from 10 to 20 tool steps.
 - Updated the Codex CLI provider prompt to use an inspect/edit/typecheck/diff loop for programming tasks.
+- Updated missing-tool, blocked-tool, and capability-gap behavior so Arnold suggests code changes when it cannot do something yet.
 
 ### 2026-05-18
 

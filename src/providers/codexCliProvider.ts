@@ -44,6 +44,8 @@ function renderPrompt(messages: AgentMessage[], context: ProviderContext): strin
     "- Use typecheck instead of shell for TypeScript verification.",
     "- Use git_status and git_diff to understand your own changes before the final response.",
     "- If a tool result starts with error:, adjust your next step instead of repeating the same call.",
+    "- If you cannot complete a request because Arnold lacks a tool, connector, permission flow, or integration, do not stop at 'I cannot'. In your final answer, include: what capability is missing, the smallest Arnold code change that would add it, likely files to edit, and any setup or safety concerns.",
+    "- If a tool is blocked by safety policy, explain whether the user can use a safer existing command, local approval mode, or a narrow new Arnold tool instead.",
     "- Do not claim a tool ran unless Arnold provided a TOOL result.",
     "- Do not ask for raw provider API keys or inspect auth tokens.",
     "",

@@ -330,6 +330,8 @@ In `codex-cli` mode, Arnold asks Codex to respond with a small JSON protocol. Co
 
 For programming tasks, Arnold's prompt now nudges Codex through a simple development loop: inspect relevant files, make the smallest coherent edit, run `typecheck`, inspect `git_status`/`git_diff`, and then summarize.
 
+When Arnold cannot complete a request because a tool, connector, permission flow, or integration is missing, it should explain the missing capability and suggest the smallest Arnold code change that would add it, including likely files to edit and any safety/setup concerns.
+
 Example:
 
 ```text
