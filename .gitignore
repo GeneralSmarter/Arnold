@@ -2,5 +2,7 @@ node_modules/
 .pnpm-store/
 .agent/secrets.json
 .agent/sessions/
+.agent/*.log
+.agent/*.lock
 dist/
 .env

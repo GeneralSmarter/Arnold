@@ -6,7 +6,10 @@ import {
   Partials,
   type Message
 } from "discord.js";
+import { open, readFile, unlink } from "node:fs/promises";
+import path from "node:path";
 import type { AppConfig } from "../config/config.js";
+import { getAgentDir } from "../config/config.js";
 import { AgentLoop } from "../agent/loop.js";
 import { SessionStore } from "../memory/sessionStore.js";
 import { createProvider } from "../providers/index.js";
@@ -17,6 +20,17 @@ export async function runDiscordListener(config: AppConfig): Promise<void> {
   if (!config.connectors.discord.enabled) {
     throw new Error("Discord connector is disabled. Set connectors.discord.enabled to true in .agent/config.json.");
   }
+
+  const releaseLock = await acquireDiscordListenerLock(config.workspaceRoot);
+  process.once("exit", releaseLock);
+  process.once("SIGINT", () => {
+    releaseLock();
+    process.exit(0);
+  });
+  process.once("SIGTERM", () => {
+    releaseLock();
+    process.exit(0);
+  });
 
   const secrets = await new SecretsStore(config.workspaceRoot).load();
   const botToken = secrets.discord?.botToken;
@@ -66,8 +80,13 @@ export async function runDiscordListener(config: AppConfig): Promise<void> {
   });
 
   logger.info("Connecting to Discord Gateway...");
-  await withTimeout(client.login(botToken), 30_000, "Discord Gateway login did not finish within 30 seconds.");
-  await waitForReady(client);
+  try {
+    await withTimeout(client.login(botToken), 30_000, "Discord Gateway login did not finish within 30 seconds.");
+    await waitForReady(client);
+  } catch (error) {
+    releaseLock();
+    throw error;
+  }
 }
 
 async function handleMessage(
@@ -139,7 +158,7 @@ async function handleMessage(
   const session = await sessionStore.create(safeRemoteConfig);
   await sessionStore.save(session);
   const loop = new AgentLoop(safeRemoteConfig, provider, sessionStore, session);
-  const answer = await loop.runUserTurn(prompt);
+  const answer = await loop.runUserTurn(withDiscordContext(message, prompt));
   await sendLongReply(message, answer);
 }
 
@@ -177,6 +196,28 @@ async function safeReply(message: Message, text: string): Promise<void> {
   await message.reply(text);
 }
 
+function withDiscordContext(message: Message, prompt: string): string {
+  return [
+    "Discord message context:",
+    `Guild ID: ${message.guildId ?? "direct-message"}`,
+    `Guild name: ${message.guild?.name ?? "direct-message"}`,
+    `Channel ID: ${message.channelId}`,
+    `Channel name: ${getChannelName(message)}`,
+    `Author ID: ${message.author.id}`,
+    `Author username: ${message.author.username}`,
+    "",
+    `User request: ${prompt}`
+  ].join("\n");
+}
+
+function getChannelName(message: Message): string {
+  const channel = message.channel;
+  if ("name" in channel && typeof channel.name === "string") {
+    return `#${channel.name}`;
+  }
+  return "direct-message";
+}
+
 async function waitForReady(client: Client): Promise<void> {
   if (client.isReady()) {
     return;
@@ -207,5 +248,55 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
     if (timeout) {
       clearTimeout(timeout);
     }
+  }
+}
+
+async function acquireDiscordListenerLock(workspaceRoot: string): Promise<() => void> {
+  const lockPath = path.join(getAgentDir(workspaceRoot), "discord-listener.lock");
+  await removeStaleLock(lockPath);
+
+  try {
+    const handle = await open(lockPath, "wx");
+    await handle.writeFile(String(process.pid), "utf8");
+    await handle.close();
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "EEXIST") {
+      throw new Error("Discord listener already appears to be running. Stop it before starting another one.");
+    }
+    throw error;
+  }
+
+  let released = false;
+  return () => {
+    if (released) {
+      return;
+    }
+    released = true;
+    void unlink(lockPath).catch(() => undefined);
+  };
+}
+
+async function removeStaleLock(lockPath: string): Promise<void> {
+  try {
+    const rawPid = (await readFile(lockPath, "utf8")).trim();
+    const pid = Number(rawPid);
+    if (Number.isInteger(pid) && pid > 0 && isProcessRunning(pid)) {
+      return;
+    }
+    await unlink(lockPath);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
+}
+
+function isProcessRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
   }
 }
