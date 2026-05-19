@@ -9,6 +9,9 @@ import { gmailCreateDraftTool } from "./gmailCreateDraft.js";
 import { fetchUrlTool } from "./fetchUrl.js";
 import { replaceInFileTool } from "./replaceInFile.js";
 import { applyPatchTool } from "./applyPatch.js";
+import { typecheckTool } from "./typecheck.js";
+import { gitDiffTool, gitStatusTool } from "./gitStatus.js";
+import { searchFilesTool } from "./searchFiles.js";
 
 const tools = [
   readFileTool,
@@ -16,6 +19,10 @@ const tools = [
   replaceInFileTool,
   applyPatchTool,
   listFilesTool,
+  searchFilesTool,
+  typecheckTool,
+  gitStatusTool,
+  gitDiffTool,
   shellTool,
   gmailSearchTool,
   gmailReadTool,

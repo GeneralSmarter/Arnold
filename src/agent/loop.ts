@@ -18,7 +18,7 @@ export class AgentLoop {
     this.session.messages.push(makeMessage("user", input));
     await this.sessionStore.save(this.session);
 
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 20; i += 1) {
       const step = await this.provider.generate(this.session.messages, {
         workspaceRoot: this.config.workspaceRoot
       });
@@ -56,11 +56,11 @@ export class AgentLoop {
       }
 
       const result = await tool.run(step.request.input, { config: this.config });
-      this.session.messages.push(makeMessage("tool", result.content, tool.name));
+      this.session.messages.push(makeMessage("tool", `${result.ok ? "ok" : "error"}:\n${result.content}`, tool.name));
       await this.sessionStore.save(this.session);
     }
 
-    const content = "Stopped after too many tool steps. Try a narrower request.";
+    const content = "Stopped after too many tool steps. Summarize progress, then try a narrower request.";
     this.session.messages.push(makeMessage("assistant", content));
     await this.sessionStore.save(this.session);
     return content;

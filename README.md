@@ -110,6 +110,10 @@ Core local tools:
 - `apply_patch`: apply a conservative unified-style text patch.
 - `write_file`: write a full file when incremental edits are not a good fit.
 - `list_files`: list workspace files and folders.
+- `search_files`: search workspace text files for an existing symbol or pattern.
+- `typecheck`: run the project TypeScript typecheck script.
+- `git_status`: show concise git status.
+- `git_diff`: show current workspace diff, optionally for one path.
 - `shell`: run a shell command from the workspace root.
 
 Current connector tools:
@@ -322,7 +326,9 @@ ARNOLD_CODEX_ARGS="exec --skip-git-repo-check --sandbox read-only -"
 
 This is intentionally easy to change later as the provider adapter matures.
 
-In `codex-cli` mode, Arnold asks Codex to respond with a small JSON protocol. Codex can request tools such as `list_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `shell`, `gmail_search`, and `fetch_url`. Arnold executes those tools through its own safety layer, so code edits can use targeted replacements or patches while shell commands still follow the configured approval mode.
+In `codex-cli` mode, Arnold asks Codex to respond with a small JSON protocol. Codex can request tools such as `list_files`, `search_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `git_status`, `git_diff`, `shell`, `gmail_search`, and `fetch_url`. Arnold executes those tools through its own safety layer, so code edits can use targeted replacements or patches while shell commands still follow the configured approval mode.
+
+For programming tasks, Arnold's prompt now nudges Codex through a simple development loop: inspect relevant files, make the smallest coherent edit, run `typecheck`, inspect `git_status`/`git_diff`, and then summarize.
 
 Example:
 
