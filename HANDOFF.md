@@ -31,7 +31,7 @@ Main source areas:
 - `src/cli.ts`: command routing for chat, config, connector listing, and Gmail auth setup/status/logout.
 - `src/agent/loop.ts`: core tool loop. It sends messages to the provider, executes requested tools after policy checks, appends tool results, and loops until final output.
 - `src/providers/`: provider interface plus `mock` and experimental `codex-cli`.
-- `src/tools/`: Arnold-owned tools. Current tools are file read/write/list/search, `replace_in_file`, `apply_patch`, `typecheck`, git status/diff, shell, Gmail search/read/create draft, and URL fetch.
+- `src/tools/`: Arnold-owned tools. Current tools are file read/write/list/search, `replace_in_file`, `apply_patch`, `typecheck`, git status/diff, shell, Gmail search/read/create draft, Discord channel admin, and URL fetch.
 - `src/safety/`: approval prompt and denylist policy.
 - `src/config/config.ts`: validates project-local config and connector settings.
 - `src/secrets/secretsStore.ts`: reads/writes `.agent/secrets.json`.
@@ -52,7 +52,7 @@ Important data flow:
 Provider/tool protocol:
 
 - `codex-cli` prompts Codex to return exactly one JSON object.
-- Codex can request tools such as `list_files`, `search_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `git_status`, `git_diff`, `shell`, `gmail_search`, `gmail_read`, `gmail_create_draft`, and `fetch_url`.
+- Codex can request tools such as `list_files`, `search_files`, `read_file`, `replace_in_file`, `apply_patch`, `write_file`, `typecheck`, `git_status`, `git_diff`, `shell`, `gmail_search`, `gmail_read`, `gmail_create_draft`, `discord_ensure_channels`, `discord_rename_channel`, and `fetch_url`.
 - The provider prompt tells Codex to inspect files first, search for existing patterns, prefer `replace_in_file` for exact targeted edits, prefer `apply_patch` for multi-line or multi-file edits, run `typecheck`, inspect `git_status`/`git_diff`, and reserve `write_file` for new files or full rewrites.
 - If Arnold cannot complete a request because a tool, connector, permission flow, or integration is missing, the provider prompt tells Codex to suggest the smallest Arnold code change that would add the capability.
 - If Codex returns invalid or plain output, Arnold treats it as a final answer rather than crashing.
@@ -167,6 +167,7 @@ Tasks that need user confirmation:
 - Added self-programming support tools (`search_files`, `typecheck`, `git_status`, `git_diff`) and increased the agent loop budget from 10 to 20 tool steps.
 - Updated the Codex CLI provider prompt to use an inspect/edit/typecheck/diff loop for programming tasks.
 - Updated missing-tool, blocked-tool, and capability-gap behavior so Arnold suggests code changes when it cannot do something yet.
+- Added Discord channel admin tools for the agent: `discord_ensure_channels` and `discord_rename_channel`.
 
 ### 2026-05-18
 

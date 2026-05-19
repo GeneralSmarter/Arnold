@@ -12,6 +12,8 @@ import { applyPatchTool } from "./applyPatch.js";
 import { typecheckTool } from "./typecheck.js";
 import { gitDiffTool, gitStatusTool } from "./gitStatus.js";
 import { searchFilesTool } from "./searchFiles.js";
+import { discordEnsureChannelsTool } from "./discordEnsureChannels.js";
+import { discordRenameChannelTool } from "./discordRenameChannel.js";
 
 const tools = [
   readFileTool,
@@ -27,6 +29,8 @@ const tools = [
   gmailSearchTool,
   gmailReadTool,
   gmailCreateDraftTool,
+  discordEnsureChannelsTool,
+  discordRenameChannelTool,
   fetchUrlTool
 ];
 

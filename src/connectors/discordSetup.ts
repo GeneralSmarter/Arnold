@@ -17,6 +17,12 @@ export interface DiscordChannelSetupResult {
   }>;
 }
 
+export interface DiscordChannelRenameResult {
+  id: string;
+  oldName: string;
+  newName: string;
+}
+
 export async function ensureDiscordTextChannels(
   config: AppConfig,
   channelNames: string[]
@@ -66,11 +72,47 @@ export async function ensureDiscordTextChannels(
   return { guildId, channels: results };
 }
 
+export async function renameDiscordChannel(
+  config: AppConfig,
+  channelId: string,
+  newName: string
+): Promise<DiscordChannelRenameResult> {
+  if (!config.connectors.discord.enabled) {
+    throw new Error("Discord connector is disabled. Set connectors.discord.enabled to true in .agent/config.json.");
+  }
+
+  const normalizedName = normalizeChannelName(newName);
+  if (!channelId.trim()) {
+    throw new Error("Missing Discord channel ID.");
+  }
+  if (!normalizedName) {
+    throw new Error("Missing new channel name.");
+  }
+
+  const secrets = await new SecretsStore(config.workspaceRoot).load();
+  const botToken = secrets.discord?.botToken;
+  if (!botToken) {
+    throw new Error("Missing Discord bot token. Run: agent auth discord token");
+  }
+
+  const rest = new REST({ version: "10" }).setToken(botToken);
+  const current = (await rest.get(Routes.channel(channelId))) as DiscordGuildChannel;
+  const updated = (await rest.patch(Routes.channel(channelId), {
+    body: { name: normalizedName }
+  })) as DiscordGuildChannel;
+
+  return {
+    id: updated.id,
+    oldName: current.name,
+    newName: updated.name
+  };
+}
+
 function normalizeChannelNames(channelNames: string[]): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
   for (const channelName of channelNames) {
-    const normalized = channelName.trim().toLowerCase().replace(/\s+/g, "-");
+    const normalized = normalizeChannelName(channelName);
     if (!normalized || seen.has(normalized)) {
       continue;
     }
@@ -78,4 +120,8 @@ function normalizeChannelNames(channelNames: string[]): string[] {
     names.push(normalized);
   }
   return names;
+}
+
+function normalizeChannelName(channelName: string): string {
+  return channelName.trim().toLowerCase().replace(/\s+/g, "-");
 }

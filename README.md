@@ -121,6 +121,8 @@ Current connector tools:
 - `gmail_search`: search Gmail with Gmail query syntax.
 - `gmail_read`: read a Gmail message by ID.
 - `gmail_create_draft`: create a Gmail draft without sending it.
+- `discord_ensure_channels`: create missing Discord text channels in the configured guild.
+- `discord_rename_channel`: rename a Discord channel by channel ID.
 - `fetch_url`: fetch readable text from an explicit public HTTP(S) URL.
 
 Remote input surfaces:
