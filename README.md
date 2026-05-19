@@ -260,7 +260,8 @@ Enable Discord in `.agent/config.json`:
       "enabled": true,
       "allowedGuildIds": [],
       "allowedChannelIds": [],
-      "commandPrefix": "!"
+      "commandPrefix": "!",
+      "respondToAllMessages": false
     }
   }
 }
@@ -288,6 +289,8 @@ Copy the returned guild ID or channel ID into `.agent/config.json`, then restart
 ```
 
 Discord `!ask` runs Arnold with `suggest` approval mode for now. Read-only tools can run, but risky actions such as file edits, shell commands, and Gmail draft creation are blocked until a dedicated remote approval flow is added.
+
+Set `respondToAllMessages` to `true` if you want Arnold to answer every non-bot message in allowed Discord locations instead of only `!ask` commands.
 
 To create or reuse a starter set of text channels in the first configured guild, run:
 
@@ -383,7 +386,8 @@ Default config:
       "enabled": false,
       "allowedGuildIds": [],
       "allowedChannelIds": [],
-      "commandPrefix": "!"
+      "commandPrefix": "!",
+      "respondToAllMessages": false
     }
   }
 }

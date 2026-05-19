@@ -42,6 +42,7 @@ export interface DiscordConnectorConfig {
   allowedGuildIds: string[];
   allowedChannelIds: string[];
   commandPrefix: string;
+  respondToAllMessages: boolean;
 }
 
 const CONFIG_DIR = ".agent";
@@ -149,7 +150,8 @@ function defaultConnectorConfig(): ConnectorConfig {
       enabled: false,
       allowedGuildIds: [],
       allowedChannelIds: [],
-      commandPrefix: "!"
+      commandPrefix: "!",
+      respondToAllMessages: false
     }
   };
 }
@@ -287,9 +289,13 @@ function validateDiscordConnectorConfig(
   const allowedGuildIds = config.allowedGuildIds ?? defaults.allowedGuildIds;
   const allowedChannelIds = config.allowedChannelIds ?? defaults.allowedChannelIds;
   const commandPrefix = config.commandPrefix ?? defaults.commandPrefix;
+  const respondToAllMessages = config.respondToAllMessages ?? defaults.respondToAllMessages;
 
   if (typeof enabled !== "boolean") {
     throw new Error("Invalid config: connectors.discord.enabled must be a boolean.");
+  }
+  if (typeof respondToAllMessages !== "boolean") {
+    throw new Error("Invalid config: connectors.discord.respondToAllMessages must be a boolean.");
   }
   if (!isStringArray(allowedGuildIds)) {
     throw new Error("Invalid config: connectors.discord.allowedGuildIds must be a string array.");
@@ -301,7 +307,7 @@ function validateDiscordConnectorConfig(
     throw new Error("Invalid config: connectors.discord.commandPrefix must be a string from 1 to 8 characters.");
   }
 
-  return { enabled, allowedGuildIds, allowedChannelIds, commandPrefix };
+  return { enabled, allowedGuildIds, allowedChannelIds, commandPrefix, respondToAllMessages };
 }
 
 function isStringArray(value: unknown): value is string[] {

@@ -64,6 +64,7 @@ Integrations:
 - Web fetch only fetches explicit HTTP(S) URLs. It blocks localhost/private network targets, limits redirects and bytes, strips basic HTML, and does not scrape search engines.
 - Telegram uses BotFather bot-token auth stored in `.agent/secrets.json`, long polling from the local machine/Pi, and `connectors.telegram.allowedChatIds` as the remote access whitelist.
 - Discord uses a bot token stored in `.agent/secrets.json`, `discord.js` Gateway events, and `connectors.discord.allowedGuildIds` / `allowedChannelIds` as the remote access whitelist.
+- Discord normally responds to commands such as `!ask`, but `connectors.discord.respondToAllMessages` can make it answer every non-bot message in allowed locations.
 
 ## 4. Current Implementation Status
 
@@ -168,6 +169,7 @@ Tasks that need user confirmation:
 - Updated the Codex CLI provider prompt to use an inspect/edit/typecheck/diff loop for programming tasks.
 - Updated missing-tool, blocked-tool, and capability-gap behavior so Arnold suggests code changes when it cannot do something yet.
 - Added Discord channel admin tools for the agent: `discord_ensure_channels` and `discord_rename_channel`.
+- Added Discord `respondToAllMessages` config support so Arnold can answer normal messages in allowed locations, not just `!ask`.
 
 ### 2026-05-18
 

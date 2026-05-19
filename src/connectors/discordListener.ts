@@ -96,8 +96,13 @@ async function handleMessage(
 ): Promise<void> {
   const text = message.content.trim();
   const prefix = config.connectors.discord.commandPrefix;
+  const isCommand = text.startsWith(prefix);
 
-  if (!text.startsWith(prefix)) {
+  if (!isCommand) {
+    if (!text || !config.connectors.discord.respondToAllMessages || !isAllowedMessage(config, message)) {
+      return;
+    }
+    await answerPrompt(config, sessionStore, message, text);
     return;
   }
 
@@ -149,6 +154,15 @@ async function handleMessage(
     return;
   }
 
+  await answerPrompt(config, sessionStore, message, prompt);
+}
+
+async function answerPrompt(
+  config: AppConfig,
+  sessionStore: SessionStore,
+  message: Message,
+  prompt: string
+): Promise<void> {
   await safeReply(message, "Thinking...");
   const safeRemoteConfig: AppConfig = {
     ...config,
