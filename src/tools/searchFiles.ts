@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type { Tool } from "./types.js";
-import { assertNotProtectedWorkspacePath, resolveInsideWorkspace } from "../utils/paths.js";
+import { isProtectedWorkspacePath, resolveInsideWorkspace } from "../utils/paths.js";
 
 const SKIP_DIRS = new Set([".git", "node_modules", "dist", ".pnpm-store", "sessions"]);
 const DEFAULT_MAX_RESULTS = 50;
@@ -74,7 +74,10 @@ async function searchFile(
   maxResults: number,
   results: string[]
 ): Promise<void> {
-  assertNotProtectedWorkspacePath(workspaceRoot, target);
+  if (isProtectedWorkspacePath(workspaceRoot, target)) {
+    return;
+  }
+
   const fileStat = await stat(target);
   if (fileStat.size > 1_000_000) {
     return;
