@@ -3,8 +3,21 @@ import path from "node:path";
 import type { Tool } from "./types.js";
 import { isProtectedWorkspacePath, resolveInsideWorkspace } from "../utils/paths.js";
 
-const SKIP_DIRS = new Set([".git", "node_modules", "dist", ".pnpm-store", "sessions"]);
+const SKIP_DIRS = new Set([
+  ".cache",
+  ".git",
+  ".next",
+  ".pnpm-store",
+  ".turbo",
+  "build",
+  "coverage",
+  "dist",
+  "node_modules",
+  "out",
+  "sessions"
+]);
 const DEFAULT_MAX_RESULTS = 50;
+const MAX_MATCH_PREVIEW_CHARS = 260;
 
 export const searchFilesTool: Tool = {
   name: "search_files",
@@ -92,9 +105,17 @@ async function searchFile(
   const lines = content.split(/\r?\n/);
   for (let index = 0; index < lines.length && results.length < maxResults; index += 1) {
     if (lines[index].includes(query)) {
-      results.push(`${relative}:${index + 1}: ${lines[index].trim()}`);
+      results.push(`${relative}:${index + 1}: ${summarizeLine(lines[index])}`);
     }
   }
+}
+
+function summarizeLine(line: string): string {
+  const trimmed = line.trim();
+  if (trimmed.length <= MAX_MATCH_PREVIEW_CHARS) {
+    return trimmed;
+  }
+  return `${trimmed.slice(0, MAX_MATCH_PREVIEW_CHARS)}...`;
 }
 
 function normalizeLimit(value: unknown): number {
