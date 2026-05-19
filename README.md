@@ -283,6 +283,12 @@ Copy the returned guild ID or channel ID into `.agent/config.json`, then restart
 
 Discord `!ask` runs Arnold with `suggest` approval mode for now. Read-only tools can run, but risky actions such as file edits, shell commands, and Gmail draft creation are blocked until a dedicated remote approval flow is added.
 
+To create or reuse a starter set of text channels in the first configured guild, run:
+
+```bash
+agent discord ensure-channels general internship-tracker uni-tracker
+```
+
 ## Mock Mode
 
 Mock mode is the default provider. It returns placeholder responses and demonstrates a tool-call flow.

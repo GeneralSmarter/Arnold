@@ -159,6 +159,7 @@ Tasks that need user confirmation:
 - Added Discord bot token storage under `.agent/secrets.json` with `agent auth discord token|status|logout`.
 - Added Discord listener with `agent discord listen`.
 - Added Discord commands `!id`, `!help`, `!status`, and `!ask <message>`.
+- Added Discord server setup command `agent discord ensure-channels [channel-name...]`.
 - Discord `!ask` runs the agent in `suggest` approval mode for now, so read-only tools can run but risky tools are blocked until remote approval is implemented.
 - Updated README with Telegram and Discord setup instructions.
 

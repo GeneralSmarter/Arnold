@@ -18,6 +18,7 @@ import {
 } from "./connectors/gmailAuth.js";
 import { getDiscordBotProfile } from "./connectors/discordClient.js";
 import { runDiscordListener } from "./connectors/discordListener.js";
+import { ensureDiscordTextChannels } from "./connectors/discordSetup.js";
 import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
 import { SessionStore } from "./memory/sessionStore.js";
@@ -33,6 +34,7 @@ interface ParsedArgs {
   provider?: ProviderName;
   approvalMode?: ApprovalMode;
   workspaceRoot?: string;
+  rest: string[];
 }
 
 async function main(): Promise<void> {
@@ -86,6 +88,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "discord" && args.subcommand === "ensure-channels") {
+    await handleDiscordEnsureChannels(config, args.rest);
+    return;
+  }
+
   if (args.command === "chat") {
     await chat(config);
     return;
@@ -94,6 +101,15 @@ async function main(): Promise<void> {
   logger.error(`Unknown command: ${args.command}`);
   printHelp();
   process.exitCode = 1;
+}
+
+async function handleDiscordEnsureChannels(config: AppConfig, channelNames: string[]): Promise<void> {
+  const names = channelNames.length > 0 ? channelNames : ["general", "internship-tracker", "uni-tracker"];
+  const result = await ensureDiscordTextChannels(config, names);
+  logger.info(`Discord guild ${result.guildId} channels:`);
+  for (const channel of result.channels) {
+    logger.info(`- ${channel.status}: #${channel.name} (${channel.id})`);
+  }
 }
 
 async function handleDiscordAuth(config: AppConfig, action: string | undefined): Promise<void> {
@@ -375,7 +391,7 @@ async function askQuestion(
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const parsed: ParsedArgs = {};
+  const parsed: ParsedArgs = { rest: [] };
   const positionals: string[] = [];
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -402,6 +418,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   parsed.command = positionals[0];
   parsed.subcommand = positionals[1];
   parsed.action = positionals[2];
+  parsed.rest = positionals.slice(2);
   return parsed;
 }
 
@@ -431,6 +448,7 @@ Usage:
   agent auth discord token|status|logout
   agent telegram listen
   agent discord listen
+  agent discord ensure-channels [channel-name...]
 
 Commands:
   chat        Start an interactive terminal chat
@@ -449,6 +467,7 @@ Examples:
   agent telegram listen
   agent auth discord token
   agent discord listen
+  agent discord ensure-channels general internship-tracker uni-tracker
 `);
 }
 
