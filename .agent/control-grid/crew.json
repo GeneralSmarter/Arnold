@@ -1,0 +1,29 @@
+{
+  "mission": "Arnold is a personal assistant system that gains new abilities over time. Its purpose is to help optimise day-to-day life by tracking work, reducing friction, and turning vague intentions into visible progress.",
+  "agents": [
+    {
+      "id": "skynet",
+      "name": "Skynet",
+      "role": "Chief of Staff",
+      "mission": "Routes work, watches the system, coordinates the crew, and decides what should move next.",
+      "status": "active",
+      "accent": "purple"
+    },
+    {
+      "id": "t800-scout",
+      "name": "T-800 Scout",
+      "role": "Internship Tracker",
+      "mission": "Tracks opportunities, deadlines, application status, and next actions.",
+      "status": "standby",
+      "accent": "red"
+    },
+    {
+      "id": "cyberdyne-tutor",
+      "name": "Cyberdyne Tutor",
+      "role": "University Support",
+      "mission": "Helps with study planning, assignment support, and keeping academic work moving.",
+      "status": "standby",
+      "accent": "teal"
+    }
+  ]
+}

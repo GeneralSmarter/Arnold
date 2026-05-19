@@ -99,6 +99,18 @@ agent chat --provider mock --approval confirm --workspace .
 agent chat --provider codex-cli
 ```
 
+Run Control Grid:
+
+```bash
+pnpm dev:control-grid
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
 ## Connectors
 
 Arnold exposes connectors to the agent as tools. Setup and debugging commands live in the CLI, but the agent uses the same tool registry as local file and shell tools.
@@ -356,6 +368,7 @@ Arnold stores project-local state in:
 ```text
 .agent/config.json
 .agent/sessions/
+.agent/control-grid/
 ```
 
 Default config:
@@ -394,6 +407,18 @@ Default config:
 ```
 
 Each chat starts a new session. The session store includes a placeholder `loadLatest` method so resume support can be expanded later.
+
+## Control Grid
+
+Control Grid is a local Next.js Mission Control dashboard in `apps/control-grid`. It reads real Arnold workspace state rather than mock data:
+
+- `.agent/sessions/*.json` for recent agent activity.
+- `.agent/control-grid/tasks.json` for the persistent task board.
+- `.agent/control-grid/crew.json` for the crew manifest and mission.
+- `README.md`, `HANDOFF.md`, future `docs/`, future `.agent/docs/`, and session summaries for the Docs index.
+- `.agent/config.json`, Discord listener logs/lock, and local git history for system status.
+
+The dashboard intentionally does not parse or render `.agent/secrets.json`. Discord admin actions call back through Arnold's CLI boundary.
 
 ## Safety Model
 

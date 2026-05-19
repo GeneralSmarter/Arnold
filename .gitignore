@@ -5,4 +5,7 @@ node_modules/
 .agent/*.log
 .agent/*.lock
 dist/
+apps/control-grid/.next/
+apps/control-grid/out/
+apps/control-grid/.env.local
 .env

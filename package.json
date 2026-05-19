@@ -9,9 +9,12 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
+    "build:control-grid": "pnpm --filter control-grid build",
+    "dev:control-grid": "pnpm --filter control-grid dev",
     "start": "node dist/cli.js",
     "lint": "tsc --noEmit",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:control-grid": "pnpm --filter control-grid typecheck"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
@@ -19,5 +22,10 @@
   },
   "dependencies": {
     "discord.js": "^14.26.4"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "sharp"
+    ]
   }
 }

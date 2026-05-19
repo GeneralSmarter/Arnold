@@ -6,7 +6,7 @@ Arnold is a local TypeScript/Node agent scaffold. The goal is to become a modula
 
 The main user goal is to have a personal, locally runnable agent platform that is easy to extend with subsystems such as code tools, Gmail, web fetch, future calendar/browser tools, and eventually VPS/daemon workflows. The user prefers something playful and useful now, but still simple enough to understand and build on.
 
-Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, self-programming support tools, Gmail connector, explicit URL fetch connector, Telegram and Discord remote input listeners, safety approvals, and JSON session storage. It is not a finished autonomous agent platform yet.
+Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, self-programming support tools, Gmail connector, explicit URL fetch connector, Telegram and Discord remote input listeners, safety approvals, JSON session storage, and a local Control Grid dashboard. It is not a finished autonomous agent platform yet.
 
 ## 2. Important Context Not Obvious From The Code
 
@@ -37,6 +37,8 @@ Main source areas:
 - `src/secrets/secretsStore.ts`: reads/writes `.agent/secrets.json`.
 - `src/connectors/`: Gmail auth/client helpers, Telegram Bot API long polling, Discord bot listener, connector metadata, and web/Gmail integration support.
 - `src/memory/sessionStore.ts`: JSON session creation/saving under `.agent/sessions`.
+- `apps/control-grid/`: Next.js App Router dashboard for local Mission Control visibility.
+- `.agent/control-grid/`: filesystem-backed Control Grid state, currently `tasks.json` and `crew.json`.
 
 Important data flow:
 
@@ -65,6 +67,7 @@ Integrations:
 - Telegram uses BotFather bot-token auth stored in `.agent/secrets.json`, long polling from the local machine/Pi, and `connectors.telegram.allowedChatIds` as the remote access whitelist.
 - Discord uses a bot token stored in `.agent/secrets.json`, `discord.js` Gateway events, and `connectors.discord.allowedGuildIds` / `allowedChannelIds` as the remote access whitelist.
 - Discord normally responds to commands such as `!ask`, but `connectors.discord.respondToAllMessages` can make it answer every non-bot message in allowed locations.
+- Control Grid reads real local workspace state: sessions, task JSON, crew JSON, docs, git metadata, config, and Discord listener logs/locks. It does not parse or render `.agent/secrets.json`.
 
 ## 4. Current Implementation Status
 
@@ -86,6 +89,7 @@ Working:
 - Web `fetch_url` tool is implemented and verified against `https://example.com` with network permission.
 - Telegram connector/listener is implemented with `agent auth telegram token`, `agent telegram listen`, `/id`, `/status`, `/help`, and `/ask <message>`.
 - Discord connector/listener is implemented with `agent auth discord token`, `agent discord listen`, `!id`, `!status`, `!help`, and `!ask <message>`.
+- Control Grid Phase 1 dashboard exists under `apps/control-grid` with Tasks, Team, Visual Office, and Docs routes.
 - TypeScript typecheck passes via `node node_modules\typescript\bin\tsc --noEmit`.
 
 Partially working or not fully proven:
@@ -101,6 +105,7 @@ Partially working or not fully proven:
 Not implemented:
 
 - Web UI/operator console.
+- Full operator console with remote approvals.
 - Daemon/server mode.
 - Calendar connector.
 - Browser automation.
@@ -170,6 +175,9 @@ Tasks that need user confirmation:
 - Updated missing-tool, blocked-tool, and capability-gap behavior so Arnold suggests code changes when it cannot do something yet.
 - Added Discord channel admin tools for the agent: `discord_ensure_channels` and `discord_rename_channel`.
 - Added Discord `respondToAllMessages` config support so Arnold can answer normal messages in allowed locations, not just `!ask`.
+- Added Control Grid Phase 1 Next.js dashboard under `apps/control-grid`.
+- Added real filesystem state under `.agent/control-grid/tasks.json` and `.agent/control-grid/crew.json`.
+- Added local dashboard routes for Tasks, Team/Discord controls, Visual Office, and Docs, wired to real sessions/config/git/docs data.
 
 ### 2026-05-18
 

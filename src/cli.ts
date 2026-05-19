@@ -18,7 +18,7 @@ import {
 } from "./connectors/gmailAuth.js";
 import { getDiscordBotProfile } from "./connectors/discordClient.js";
 import { runDiscordListener } from "./connectors/discordListener.js";
-import { ensureDiscordTextChannels } from "./connectors/discordSetup.js";
+import { ensureDiscordTextChannels, renameDiscordChannel } from "./connectors/discordSetup.js";
 import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
 import { SessionStore } from "./memory/sessionStore.js";
@@ -93,6 +93,11 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "discord" && args.subcommand === "rename-channel") {
+    await handleDiscordRenameChannel(config, args.action, args.rest[1]);
+    return;
+  }
+
   if (args.command === "chat") {
     await chat(config);
     return;
@@ -110,6 +115,21 @@ async function handleDiscordEnsureChannels(config: AppConfig, channelNames: stri
   for (const channel of result.channels) {
     logger.info(`- ${channel.status}: #${channel.name} (${channel.id})`);
   }
+}
+
+async function handleDiscordRenameChannel(
+  config: AppConfig,
+  channelId: string | undefined,
+  newName: string | undefined
+): Promise<void> {
+  if (!channelId || !newName) {
+    logger.error("Usage: agent discord rename-channel <channel-id> <new-name>");
+    process.exitCode = 1;
+    return;
+  }
+
+  const result = await renameDiscordChannel(config, channelId, newName);
+  logger.info(`Renamed Discord channel ${result.id} from #${result.oldName} to #${result.newName}.`);
 }
 
 async function handleDiscordAuth(config: AppConfig, action: string | undefined): Promise<void> {
@@ -449,6 +469,7 @@ Usage:
   agent telegram listen
   agent discord listen
   agent discord ensure-channels [channel-name...]
+  agent discord rename-channel <channel-id> <new-name>
 
 Commands:
   chat        Start an interactive terminal chat
@@ -468,6 +489,7 @@ Examples:
   agent auth discord token
   agent discord listen
   agent discord ensure-channels general internship-tracker uni-tracker
+  agent discord rename-channel 123456789 arnolds-cave
 `);
 }
 

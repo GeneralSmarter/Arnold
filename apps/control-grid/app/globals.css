@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 70% 0%, rgba(111, 78, 255, 0.14), transparent 34rem),
+    linear-gradient(180deg, #050814 0%, #080d1b 100%);
+  color: #e8edf7;
+}
+
+::selection {
+  background: rgba(95, 242, 208, 0.25);
+}
+
+.pixelated {
+  image-rendering: pixelated;
+}
+
+.scanline {
+  background-image: linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 100% 10px;
+}

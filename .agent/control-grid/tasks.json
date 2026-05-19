@@ -1,0 +1,31 @@
+{
+  "tasks": [
+    {
+      "id": "control-grid-phase-1",
+      "title": "Build Control Grid Phase 1",
+      "description": "Create a local Mission Control dashboard wired to real Arnold workspace state.",
+      "status": "in-progress",
+      "owner": "Skynet",
+      "source": "Control Grid brief",
+      "updatedAt": "2026-05-19T00:00:00.000Z"
+    },
+    {
+      "id": "discord-remote-approval",
+      "title": "Add remote approval flow",
+      "description": "Let Telegram and Discord approve or deny risky Arnold tool calls safely.",
+      "status": "backlog",
+      "owner": "Skynet",
+      "source": "HANDOFF.md",
+      "updatedAt": "2026-05-19T00:00:00.000Z"
+    },
+    {
+      "id": "session-resume",
+      "title": "Add session list and resume",
+      "description": "Add agent sessions list and chat resume support.",
+      "status": "backlog",
+      "owner": "Skynet",
+      "source": "HANDOFF.md",
+      "updatedAt": "2026-05-19T00:00:00.000Z"
+    }
+  ]
+}
