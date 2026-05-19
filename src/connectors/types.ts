@@ -1,6 +1,6 @@
 import type { Tool } from "../tools/types.js";
 
-export type ConnectorName = "gmail" | "web" | "telegram";
+export type ConnectorName = "gmail" | "web" | "telegram" | "discord";
 
 export interface ConnectorMetadata {
   name: ConnectorName;

@@ -22,6 +22,12 @@
       "enabled": false,
       "allowedChatIds": [],
       "pollTimeoutSeconds": 25
+    },
+    "discord": {
+      "enabled": false,
+      "allowedGuildIds": [],
+      "allowedChannelIds": [],
+      "commandPrefix": "!"
     }
   }
 }

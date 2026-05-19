@@ -9,7 +9,7 @@ Arnold is a clean local AI agent scaffold with a CLI-first interface. It is mean
 - A modular provider layer with mock mode and an experimental Codex CLI wrapper.
 - A small tool system for file reads, incremental edits, full file writes, file listing, and shell commands.
 - Connector tools for Gmail and explicit web URL fetching.
-- A Telegram listener for remote `/ask` messages from allowed chats.
+- Telegram and Discord listeners for remote `/ask` messages from allowed chats/channels.
 - A basic safety layer with approval modes and a destructive-command denylist.
 - Project-local JSON config and session storage.
 
@@ -85,6 +85,13 @@ agent auth telegram token
 agent telegram listen
 ```
 
+Configure Discord:
+
+```bash
+agent auth discord token
+agent discord listen
+```
+
 Useful overrides:
 
 ```bash
@@ -115,6 +122,7 @@ Current connector tools:
 Remote input surfaces:
 
 - Telegram long polling can receive `/ask` commands and pass them into Arnold.
+- Discord can receive `!ask` commands from allowed servers or channels.
 
 Connector secrets are stored in:
 
@@ -227,6 +235,54 @@ Message your bot with `/id`, copy the returned chat ID into `allowedChatIds`, th
 
 Telegram `/ask` runs Arnold with `suggest` approval mode for now. Read-only tools can run, but risky actions such as file edits, shell commands, and Gmail draft creation are blocked until a dedicated remote approval flow is added.
 
+## Discord Setup
+
+Create an app at the Discord Developer Portal, add a bot to it, then copy the bot token. In the bot settings, enable the Message Content Intent so Arnold can read `!ask` messages.
+
+Save the token:
+
+```bash
+agent auth discord token
+```
+
+Enable Discord in `.agent/config.json`:
+
+```json
+{
+  "connectors": {
+    "discord": {
+      "enabled": true,
+      "allowedGuildIds": [],
+      "allowedChannelIds": [],
+      "commandPrefix": "!"
+    }
+  }
+}
+```
+
+Invite the bot to your server from the Developer Portal OAuth2 URL generator. Select `bot` scope and grant basic send/read message permissions.
+
+Start the listener:
+
+```bash
+agent discord listen
+```
+
+In Discord, send:
+
+```text
+!id
+```
+
+Copy the returned guild ID or channel ID into `.agent/config.json`, then restart the listener. After that, use:
+
+```text
+!status
+!ask what are the next tasks in HANDOFF.md?
+```
+
+Discord `!ask` runs Arnold with `suggest` approval mode for now. Read-only tools can run, but risky actions such as file edits, shell commands, and Gmail draft creation are blocked until a dedicated remote approval flow is added.
+
 ## Mock Mode
 
 Mock mode is the default provider. It returns placeholder responses and demonstrates a tool-call flow.
@@ -306,6 +362,12 @@ Default config:
       "enabled": false,
       "allowedChatIds": [],
       "pollTimeoutSeconds": 25
+    },
+    "discord": {
+      "enabled": false,
+      "allowedGuildIds": [],
+      "allowedChannelIds": [],
+      "commandPrefix": "!"
     }
   }
 }

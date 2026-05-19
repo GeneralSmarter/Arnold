@@ -5,6 +5,7 @@ import { getAgentDir } from "../config/config.js";
 export interface SecretFile {
   google?: GoogleSecrets;
   telegram?: TelegramSecrets;
+  discord?: DiscordSecrets;
 }
 
 export interface GoogleSecrets {
@@ -23,6 +24,10 @@ export interface GmailTokenSecrets {
 }
 
 export interface TelegramSecrets {
+  botToken?: string;
+}
+
+export interface DiscordSecrets {
   botToken?: string;
 }
 
@@ -70,6 +75,12 @@ export class SecretsStore {
   async clearTelegram(): Promise<void> {
     const secrets = await this.load();
     delete secrets.telegram;
+    await this.save(secrets);
+  }
+
+  async clearDiscord(): Promise<void> {
+    const secrets = await this.load();
+    delete secrets.discord;
     await this.save(secrets);
   }
 

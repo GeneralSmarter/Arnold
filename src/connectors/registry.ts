@@ -18,6 +18,12 @@ export const connectors: ConnectorMetadata[] = [
     displayName: "Telegram",
     description: "Receive remote chat commands through a Telegram bot using long polling.",
     tools: []
+  },
+  {
+    name: "discord",
+    displayName: "Discord",
+    description: "Receive remote chat commands through a Discord bot.",
+    tools: []
   }
 ];
 

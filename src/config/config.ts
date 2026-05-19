@@ -15,6 +15,7 @@ export interface ConnectorConfig {
   gmail: GmailConnectorConfig;
   web: WebConnectorConfig;
   telegram: TelegramConnectorConfig;
+  discord: DiscordConnectorConfig;
 }
 
 export interface GmailConnectorConfig {
@@ -34,6 +35,13 @@ export interface TelegramConnectorConfig {
   enabled: boolean;
   allowedChatIds: string[];
   pollTimeoutSeconds: number;
+}
+
+export interface DiscordConnectorConfig {
+  enabled: boolean;
+  allowedGuildIds: string[];
+  allowedChannelIds: string[];
+  commandPrefix: string;
 }
 
 const CONFIG_DIR = ".agent";
@@ -136,6 +144,12 @@ function defaultConnectorConfig(): ConnectorConfig {
       enabled: false,
       allowedChatIds: [],
       pollTimeoutSeconds: 25
+    },
+    discord: {
+      enabled: false,
+      allowedGuildIds: [],
+      allowedChannelIds: [],
+      commandPrefix: "!"
     }
   };
 }
@@ -152,7 +166,8 @@ function validateConnectorConfig(value: unknown): ConnectorConfig {
   return {
     gmail: validateGmailConnectorConfig(connectors.gmail, defaults.gmail),
     web: validateWebConnectorConfig(connectors.web, defaults.web),
-    telegram: validateTelegramConnectorConfig(connectors.telegram, defaults.telegram)
+    telegram: validateTelegramConnectorConfig(connectors.telegram, defaults.telegram),
+    discord: validateDiscordConnectorConfig(connectors.discord, defaults.discord)
   };
 }
 
@@ -255,6 +270,38 @@ function validateTelegramConnectorConfig(
   }
 
   return { enabled, allowedChatIds, pollTimeoutSeconds };
+}
+
+function validateDiscordConnectorConfig(
+  value: unknown,
+  defaults: DiscordConnectorConfig
+): DiscordConnectorConfig {
+  if (value === undefined) {
+    return defaults;
+  }
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid config: connectors.discord must be an object.");
+  }
+  const config = value as Record<string, unknown>;
+  const enabled = config.enabled ?? defaults.enabled;
+  const allowedGuildIds = config.allowedGuildIds ?? defaults.allowedGuildIds;
+  const allowedChannelIds = config.allowedChannelIds ?? defaults.allowedChannelIds;
+  const commandPrefix = config.commandPrefix ?? defaults.commandPrefix;
+
+  if (typeof enabled !== "boolean") {
+    throw new Error("Invalid config: connectors.discord.enabled must be a boolean.");
+  }
+  if (!isStringArray(allowedGuildIds)) {
+    throw new Error("Invalid config: connectors.discord.allowedGuildIds must be a string array.");
+  }
+  if (!isStringArray(allowedChannelIds)) {
+    throw new Error("Invalid config: connectors.discord.allowedChannelIds must be a string array.");
+  }
+  if (typeof commandPrefix !== "string" || commandPrefix.length < 1 || commandPrefix.length > 8) {
+    throw new Error("Invalid config: connectors.discord.commandPrefix must be a string from 1 to 8 characters.");
+  }
+
+  return { enabled, allowedGuildIds, allowedChannelIds, commandPrefix };
 }
 
 function isStringArray(value: unknown): value is string[] {

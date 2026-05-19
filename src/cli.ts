@@ -16,6 +16,7 @@ import {
   getGmailAuthStatus,
   toStoredToken
 } from "./connectors/gmailAuth.js";
+import { runDiscordListener } from "./connectors/discordListener.js";
 import { runTelegramListener } from "./connectors/telegramListener.js";
 import { listConnectors } from "./connectors/registry.js";
 import { SessionStore } from "./memory/sessionStore.js";
@@ -69,8 +70,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "auth" && args.subcommand === "discord") {
+    await handleDiscordAuth(config, args.action);
+    return;
+  }
+
   if (args.command === "telegram" && args.subcommand === "listen") {
     await runTelegramListener(config);
+    return;
+  }
+
+  if (args.command === "discord" && args.subcommand === "listen") {
+    await runDiscordListener(config);
     return;
   }
 
@@ -81,6 +92,47 @@ async function main(): Promise<void> {
 
   logger.error(`Unknown command: ${args.command}`);
   printHelp();
+  process.exitCode = 1;
+}
+
+async function handleDiscordAuth(config: AppConfig, action: string | undefined): Promise<void> {
+  const store = new SecretsStore(config.workspaceRoot);
+
+  if (action === "status") {
+    const secrets = await store.load();
+    logger.info(secrets.discord?.botToken ? "Discord bot token is configured." : "Discord bot token is not configured.");
+    return;
+  }
+
+  if (action === "logout") {
+    await store.clearDiscord();
+    logger.info("Discord bot token removed from .agent/secrets.json.");
+    return;
+  }
+
+  if (action === "token") {
+    const rl = createInterface({ input, output });
+    try {
+      const token = stripOuterQuotes((await rl.question("Discord bot token: ")).trim());
+      if (!token) {
+        throw new Error("Discord bot token is required.");
+      }
+      const secrets = await store.load();
+      await store.save({
+        ...secrets,
+        discord: { botToken: token }
+      });
+      logger.info(`Discord token saved to ${store.path()}.`);
+      if (!config.connectors.discord.enabled) {
+        logger.info("Discord connector is still disabled. Set connectors.discord.enabled to true in .agent/config.json.");
+      }
+    } finally {
+      rl.close();
+    }
+    return;
+  }
+
+  logger.error("Usage: agent auth discord token|status|logout");
   process.exitCode = 1;
 }
 
@@ -369,7 +421,9 @@ Usage:
   agent connectors
   agent auth gmail login|status|logout
   agent auth telegram token|status|logout
+  agent auth discord token|status|logout
   agent telegram listen
+  agent discord listen
 
 Commands:
   chat        Start an interactive terminal chat
@@ -377,6 +431,7 @@ Commands:
   connectors  List installed connectors and their tools
   auth        Configure connector authentication
   telegram    Run the Telegram bot listener
+  discord     Run the Discord bot listener
 
 Examples:
   agent chat
@@ -385,6 +440,8 @@ Examples:
   agent auth gmail status
   agent auth telegram token
   agent telegram listen
+  agent auth discord token
+  agent discord listen
 `);
 }
 

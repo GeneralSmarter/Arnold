@@ -6,7 +6,7 @@ Arnold is a local TypeScript/Node agent scaffold. The goal is to become a modula
 
 The main user goal is to have a personal, locally runnable agent platform that is easy to extend with subsystems such as code tools, Gmail, web fetch, future calendar/browser tools, and eventually VPS/daemon workflows. The user prefers something playful and useful now, but still simple enough to understand and build on.
 
-Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, Gmail connector, explicit URL fetch connector, Telegram remote input listener, safety approvals, and JSON session storage. It is not a finished autonomous agent platform yet.
+Current stage: early v0 scaffold with a working CLI, provider abstraction, tool registry, workspace file tools, safer incremental edit tools, Gmail connector, explicit URL fetch connector, Telegram and Discord remote input listeners, safety approvals, and JSON session storage. It is not a finished autonomous agent platform yet.
 
 ## 2. Important Context Not Obvious From The Code
 
@@ -35,7 +35,7 @@ Main source areas:
 - `src/safety/`: approval prompt and denylist policy.
 - `src/config/config.ts`: validates project-local config and connector settings.
 - `src/secrets/secretsStore.ts`: reads/writes `.agent/secrets.json`.
-- `src/connectors/`: Gmail auth/client helpers, Telegram Bot API long polling, connector metadata, and web/Gmail integration support.
+- `src/connectors/`: Gmail auth/client helpers, Telegram Bot API long polling, Discord bot listener, connector metadata, and web/Gmail integration support.
 - `src/memory/sessionStore.ts`: JSON session creation/saving under `.agent/sessions`.
 
 Important data flow:
@@ -62,6 +62,7 @@ Integrations:
 - Gmail scopes are `gmail.readonly` and `gmail.compose`; Arnold creates drafts only and does not send mail.
 - Web fetch only fetches explicit HTTP(S) URLs. It blocks localhost/private network targets, limits redirects and bytes, strips basic HTML, and does not scrape search engines.
 - Telegram uses BotFather bot-token auth stored in `.agent/secrets.json`, long polling from the local machine/Pi, and `connectors.telegram.allowedChatIds` as the remote access whitelist.
+- Discord uses a bot token stored in `.agent/secrets.json`, `discord.js` Gateway events, and `connectors.discord.allowedGuildIds` / `allowedChannelIds` as the remote access whitelist.
 
 ## 4. Current Implementation Status
 
@@ -81,12 +82,14 @@ Working:
 - Gmail search/read/draft tools are implemented.
 - Web `fetch_url` tool is implemented and verified against `https://example.com` with network permission.
 - Telegram connector/listener is implemented with `agent auth telegram token`, `agent telegram listen`, `/id`, `/status`, `/help`, and `/ask <message>`.
+- Discord connector/listener is implemented with `agent auth discord token`, `agent discord listen`, `!id`, `!status`, `!help`, and `!ask <message>`.
 - TypeScript typecheck passes via `node node_modules\typescript\bin\tsc --noEmit`.
 
 Partially working or not fully proven:
 
 - End-to-end Gmail search/read/draft through the chat agent still needs real-world testing after auth.
 - End-to-end Telegram with a real BotFather token still needs live testing.
+- End-to-end Discord with a real bot token and server/channel whitelist still needs live testing.
 - Codex's compliance with the JSON tool protocol may vary; prompt/parser are tolerant but not bulletproof.
 - `apply_patch` is conservative and TypeScript-clean, but still needs a full interactive `agent chat --provider codex-cli` edit test.
 - `write_file` still writes full file contents; use it mainly for new files, full rewrites, or cases where incremental edits are not a good fit.
@@ -125,7 +128,7 @@ Priority next steps:
 3. Add `agent sessions list` and `agent chat --resume`.
 4. Add a tool-call/activity log view in CLI output so users can see what Arnold is doing without opening session JSON.
 5. Add `agent tools` to list all available tools and their risky/read-only status.
-6. Add Telegram remote approval commands such as `/approve <id>` and `/deny <id>`.
+6. Add remote approval commands such as `/approve <id>` and `/deny <id>` for Telegram/Discord.
 7. Add workflow files under a future `workflows/` folder.
 
 Avoid doing next unless the user confirms:
@@ -133,7 +136,7 @@ Avoid doing next unless the user confirms:
 - Re-adding WhatsApp or messaging connectors.
 - Enabling email sending.
 - Setting approval mode to `auto`.
-- Letting Telegram execute risky tools without a remote approval flow.
+- Letting Telegram or Discord execute risky tools without a remote approval flow.
 - Adding browser automation that relies on cookies or private browser sessions.
 - Moving secrets into normal config.
 
@@ -152,7 +155,12 @@ Tasks that need user confirmation:
 - Added Telegram long-polling listener with `agent telegram listen`.
 - Added Telegram commands `/id`, `/help`, `/status`, and `/ask <message>`.
 - Telegram `/ask` runs the agent in `suggest` approval mode for now, so read-only tools can run but risky tools are blocked until remote approval is implemented.
-- Updated README with Telegram setup instructions.
+- Added Discord connector config and connector registry metadata.
+- Added Discord bot token storage under `.agent/secrets.json` with `agent auth discord token|status|logout`.
+- Added Discord listener with `agent discord listen`.
+- Added Discord commands `!id`, `!help`, `!status`, and `!ask <message>`.
+- Discord `!ask` runs the agent in `suggest` approval mode for now, so read-only tools can run but risky tools are blocked until remote approval is implemented.
+- Updated README with Telegram and Discord setup instructions.
 
 ### 2026-05-18
 
